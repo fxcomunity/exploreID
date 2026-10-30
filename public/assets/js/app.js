@@ -131,7 +131,7 @@ function categoryCard(category) {
 }
 
 function errorPanel() {
-  return `<div class="api-state api-error" role="alert"><strong>Data belum dapat dimuat.</strong><p>Pastikan Cloudflare Worker dan binding D1 sudah disiapkan, lalu coba muat ulang.</p><button class="button-outline" type="button" data-action="retry">Coba lagi</button></div>`;
+  return `<div class="api-state api-error" role="alert"><strong>Data belum dapat dimuat.</strong><p>Pastikan Cloudflare Pages Functions aktif, secret DATABASE_URL sudah diatur, dan dataset telah diimpor ke Neon. Setelah itu, coba muat ulang.</p><button class="button-outline" type="button" data-action="retry">Coba lagi</button></div>`;
 }
 
 function emptyPanel(title, description) {
@@ -194,7 +194,7 @@ function mapPage() {
 }
 
 function aboutPage() {
-  return `<main><section class="page-hero page-hero-soft"><div class="page-hero-inner"><p class="eyebrow"><span class="eyebrow-dot"></span> TENTANG EXPLOREID</p><h1>Informasi tempat<br/><em>lebih mudah dijelajahi.</em></h1><p>ExploreID menampilkan data tempat yang diimpor dari OpenStreetMap dan menjaga sumbernya tetap terlihat.</p></div></section><section class="section-wrap about-content"><div class="about-intro"><p class="eyebrow"><span class="eyebrow-dot"></span> PRINSIP DATA</p><h2>Data yang tersedia ditampilkan sesuai sumber—tanpa mengisi informasi yang <em>tidak diberikan.</em></h2></div><div class="about-copy"><p>Dataset yang digunakan berisi rekaman OpenStreetMap dan atribut seperti nama, jenis objek, kategori, alamat, koordinat, tautan sumber, serta waktu pengumpulan. Nilai kosong tetap kosong dan tidak diisi dengan perkiraan.</p><p>Kategori mengikuti tag sumber. Beberapa rekaman dapat berupa akomodasi atau objek lain, bukan hanya destinasi wisata. Selalu buka tautan sumber untuk memeriksa informasi terbaru sebelum berkunjung.</p></div><div class="values-grid"><article><span>01</span><h3>Sumber tetap tercatat</h3><p>Setiap rekaman membawa tipe dan ID OpenStreetMap serta tautan sumber.</p></article><article><span>02</span><h3>Tidak menebak data</h3><p>Atribut yang tidak tersedia dibiarkan kosong, bukan dibuat-buat.</p></article><article><span>03</span><h3>Terhubung ke database</h3><p>Daftar tempat dan kategori dimuat lewat API dari Cloudflare D1.</p></article></div></section></main>`;
+  return `<main><section class="page-hero page-hero-soft"><div class="page-hero-inner"><p class="eyebrow"><span class="eyebrow-dot"></span> TENTANG EXPLOREID</p><h1>Informasi tempat<br/><em>lebih mudah dijelajahi.</em></h1><p>ExploreID menampilkan data tempat yang diimpor dari OpenStreetMap dan menjaga sumbernya tetap terlihat.</p></div></section><section class="section-wrap about-content"><div class="about-intro"><p class="eyebrow"><span class="eyebrow-dot"></span> PRINSIP DATA</p><h2>Data yang tersedia ditampilkan sesuai sumber—tanpa mengisi informasi yang <em>tidak diberikan.</em></h2></div><div class="about-copy"><p>Dataset yang digunakan berisi rekaman OpenStreetMap dan atribut seperti nama, jenis objek, kategori, alamat, koordinat, tautan sumber, serta waktu pengumpulan. Nilai kosong tetap kosong dan tidak diisi dengan perkiraan.</p><p>Kategori mengikuti tag sumber. Beberapa rekaman dapat berupa akomodasi atau objek lain, bukan hanya destinasi wisata. Selalu buka tautan sumber untuk memeriksa informasi terbaru sebelum berkunjung.</p></div><div class="values-grid"><article><span>01</span><h3>Sumber tetap tercatat</h3><p>Setiap rekaman membawa tipe dan ID OpenStreetMap serta tautan sumber.</p></article><article><span>02</span><h3>Tidak menebak data</h3><p>Atribut yang tidak tersedia dibiarkan kosong, bukan dibuat-buat.</p></article><article><span>03</span><h3>Terhubung ke database</h3><p>Daftar tempat dan kategori dimuat lewat API dari Neon PostgreSQL.</p></article></div></section></main>`;
 }
 
 function detailPage() {
@@ -343,7 +343,7 @@ function renderPlaces(target, places, actions = true) {
   if (!grid) return;
   grid.innerHTML = places.length
     ? places.map((place, index) => placeCard(place, index, actions)).join("")
-    : emptyPanel("Belum ada data tempat.", "Pastikan dataset telah diimpor ke Cloudflare D1.");
+    : emptyPanel("Belum ada data tempat.", "Pastikan dataset telah diimpor ke Neon PostgreSQL.");
 }
 
 async function renderListing() {

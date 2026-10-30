@@ -50,7 +50,7 @@ Gunakan teknologi berikut sebagai standar utama:
 - REST API
 
 **Database**
-- Cloudflare D1 (SQLite)
+- Neon Serverless PostgreSQL
 - Relational Database Design
 
 **Mapping & Geospatial**
@@ -188,7 +188,7 @@ Sistem memiliki tiga jenis pengguna:
 
 ### 7. DATABASE DESIGN
 
-Gunakan Cloudflare D1 dengan SQLite. Dataset OpenStreetMap yang disediakan diimpor ke tabel `tourism_places` menggunakan `database/schema.sql` dan `database/import_openstreetmap.sql`.
+Gunakan Neon Serverless PostgreSQL. Dataset OpenStreetMap yang disediakan diimpor ke tabel `tourism_places` menggunakan `database/schema.sql` dan `database/import_openstreetmap.sql`. Cloudflare Pages Functions mengakses Neon melalui `@neondatabase/serverless` dan secret `DATABASE_URL`.
 
 Kolom sumber OpenStreetMap disimpan apa adanya, termasuk tipe dan ID objek, kategori sumber, koordinat, URL sumber, dan waktu pengumpulan. Nilai yang tidak tersedia disimpan sebagai `NULL`; jangan mengubah tag sumber menjadi kategori resmi tanpa proses verifikasi.
 
@@ -280,7 +280,7 @@ Pisahkan:
 - Data validation.
 - External integrations.
 
-Gunakan Cloudflare Pages untuk frontend dan Pages Functions untuk REST API. Akses database melalui binding D1 bernama `DB`. Pisahkan handler API, tampilan, dan akses data sesuai tanggung jawabnya.
+Gunakan Cloudflare Pages untuk frontend dan Pages Functions untuk REST API. Akses Neon melalui `DATABASE_URL` yang disetel sebagai secret environment, bukan melalui binding database atau nilai yang ditulis di source code. Pisahkan handler API, tampilan, dan akses data sesuai tanggung jawabnya.
 
 Pastikan API memiliki struktur response yang konsisten.
 
@@ -344,7 +344,7 @@ Kerjakan project dengan tahapan berikut:
 - Admin dashboard.
 
 **PHASE 6 – Integration**
-- Integrasi Cloudflare D1.
+- Integrasi Neon PostgreSQL.
 - Integrasi Leaflet.
 - Integrasi OpenStreetMap.
 - Integrasi API.
@@ -360,7 +360,7 @@ Kerjakan project dengan tahapan berikut:
 **PHASE 8 – Deployment**
 - Cloudflare Pages configuration.
 - Environment configuration.
-- D1 database deployment and import.
+- Neon database setup and import.
 - Domain configuration.
 - Final verification.
 
