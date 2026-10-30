@@ -1,0 +1,13 @@
+RewriteEngine On
+
+RewriteRule ^public/ - [L]
+RewriteRule ^$ public/index.html [L]
+RewriteRule ^destinasi\.html$ public/pages/destinasi.html [L,QSA]
+RewriteRule ^kategori\.html$ public/pages/kategori.html [L]
+RewriteRule ^peta\.html$ public/pages/peta.html [L]
+RewriteRule ^tentang\.html$ public/pages/tentang.html [L]
+RewriteRule ^masuk\.html$ public/pages/akun/masuk.html [L]
+RewriteRule ^daftar\.html$ public/pages/akun/daftar.html [L]
+RewriteRule ^tersimpan\.html$ public/pages/pengguna/tersimpan.html [L]
+RewriteRule ^itinerary\.html$ public/pages/pengguna/itinerary.html [L]
+RewriteRule ^(.*)$ public/$1 [L]
