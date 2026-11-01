@@ -1,0 +1,12 @@
+name = "world-monitor"
+main = "worker.ts"
+compatibility_date = "2024-11-01"
+account_id = "5c64a232613ca2de5fcb608e65584bd4"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[vars]
+ENVIRONMENT = "production"

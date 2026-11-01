@@ -1,15 +1,12 @@
 {
-  "name": "exploreid",
+  "name": "world-monitor",
+  "version": "1.0.0",
+  "description": "Global Real-Time Intelligence & Geospatial Analytics Platform",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev public",
-    "deploy": "wrangler pages deploy public --project-name=exploreid"
-  },
-  "dependencies": {
-    "@neondatabase/serverless": "^1.0.2"
-  },
-  "devDependencies": {
-    "wrangler": "^4.0.0"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "deploy": "npm --prefix frontend run deploy",
+    "worker:dev": "npm --prefix frontend run worker:dev"
   }
 }
