@@ -29,9 +29,13 @@ export default function Landing() {
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             <span className="text-green-400 text-xs font-bold tracking-widest">SISTEM AKTIF · DATA REAL-TIME</span>
           </div>
-          <h1 className="text-4xl font-bold text-white leading-tight mb-2">
-            WORLD <span className="text-cyan-400">MONITOR</span>
-          </h1>
+          <div className="mb-4">
+            <img
+              src="/logo.png"
+              alt="World Monitor — Real-Time Global Insights"
+              className="h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_20px_rgba(0,229,255,0.3)]"
+            />
+          </div>
           <p className="text-gray-400 text-sm max-w-xl leading-relaxed mb-6">
             Platform pemantauan kondisi global — mengumpulkan, menganalisis, dan memvisualisasikan
             informasi dari seluruh penjuru dunia secara real-time.

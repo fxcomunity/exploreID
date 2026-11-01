@@ -46,15 +46,19 @@ export default function Sidebar() {
       } min-h-screen`}
     >
       {/* Logo */}
-      <div className={`flex items-center border-b border-cyan-900/50 py-4 ${collapsed ? 'justify-center px-0' : 'px-4 gap-3'}`}>
-        <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center flex-shrink-0">
-          <Globe className="w-4 h-4 text-cyan-400" />
-        </div>
-        {!collapsed && (
-          <div>
-            <div className="text-white text-sm font-bold leading-tight">WORLD</div>
-            <div className="text-cyan-400 text-xs font-bold tracking-widest leading-tight">MONITOR</div>
-          </div>
+      <div className={`flex items-center border-b border-cyan-900/50 py-3 ${collapsed ? 'justify-center px-0' : 'px-4'}`}>
+        {collapsed ? (
+          <img
+            src="/favicon.png"
+            alt="World Monitor"
+            className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(0,229,255,0.4)]"
+          />
+        ) : (
+          <img
+            src="/logo.png"
+            alt="World Monitor"
+            className="h-10 w-auto object-contain drop-shadow-[0_0_10px_rgba(0,229,255,0.25)]"
+          />
         )}
       </div>
 
