@@ -3,12 +3,13 @@ import {
   Shield, Server, Lock, Cpu, Database, Terminal,
   HardDrive, Key, Power, User, Settings, Save,
   CheckCircle2, AlertCircle, Wrench, Clock, Globe,
-  Eye, EyeOff, LayoutTemplate, Palette
+  Eye, EyeOff, LayoutTemplate, Palette, Star, MessageSquare,
+  ThumbsUp, Smartphone, Monitor, RefreshCw
 } from 'lucide-react';
 import { isAdminAuthenticated, removeAdminCookie } from '../lib/auth';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'MAINTENANCE' | 'SECURITY' | 'PROFILE' | 'API_KEYS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'MAINTENANCE' | 'SECURITY' | 'PROFILE' | 'API_KEYS' | 'FEEDBACK'>('OVERVIEW');
 
   // Profile Settings State (Bisa Ganti Nama, Email, Password)
   const [adminName, setAdminName] = useState(() => localStorage.getItem('wm_admin_name') || 'Admin Jack');
@@ -45,6 +46,30 @@ export default function AdminDashboard() {
     if (!isAdminAuthenticated()) {
       window.location.href = '/auth/admin';
     }
+  }, []);
+
+  // Feedback State
+  const [adminFeedbacks, setAdminFeedbacks] = useState<any[]>([]);
+  const [feedbackStats, setFeedbackStats] = useState({ averageRating: 5.0, totalRatings: 0 });
+
+  const loadAdminFeedbacks = async () => {
+    try {
+      const res = await fetch('/api/feedback');
+      if (res.ok) {
+        const d = await res.json();
+        setAdminFeedbacks(d.feedbacks || []);
+        setFeedbackStats({
+          averageRating: d.averageRating || 5.0,
+          totalRatings: d.totalRatings || 0,
+        });
+      }
+    } catch {
+      // fallback
+    }
+  };
+
+  useEffect(() => {
+    loadAdminFeedbacks();
   }, []);
 
   const handleLogout = () => {
@@ -224,6 +249,7 @@ export default function AdminDashboard() {
             { id: 'PROFILE', label: 'Profil & Ganti Password Admin', icon: User },
             { id: 'SECURITY', label: 'Keamanan & Proteksi Serangan', icon: Lock },
             { id: 'API_KEYS', label: 'Status API Gateway', icon: Key },
+            { id: 'FEEDBACK', label: 'Ulasan & Rating Pengunjung', icon: Star },
           ].map(tab => {
             const Icon = tab.icon;
             return (
@@ -708,6 +734,84 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB 6: FEEDBACK & RATINGS PENGUNJUNG ─── */}
+        {activeTab === 'FEEDBACK' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40 text-center">
+                <div className="text-[11px] text-gray-400 uppercase font-mono">Rata-Rata Kepuasan</div>
+                <div className="text-3xl font-extrabold text-amber-400 mt-1 flex items-center justify-center gap-1">
+                  <Star className="w-6 h-6 fill-amber-400" />
+                  <span>{feedbackStats.averageRating.toFixed(1)} / 5.0</span>
+                </div>
+                <div className="text-[10px] text-gray-500 font-mono mt-1">Berdasarkan suara pengunjung publik</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40 text-center">
+                <div className="text-[11px] text-gray-400 uppercase font-mono">Total Pemberi Suka</div>
+                <div className="text-3xl font-extrabold text-cyan-300 mt-1">
+                  {feedbackStats.totalRatings}
+                </div>
+                <div className="text-[10px] text-emerald-400 font-mono mt-1">Sistem 1 HP = 1 ID Unik Konsisten</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40 flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={loadAdminFeedbacks}
+                  className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black text-xs font-bold transition flex items-center gap-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Ulasan Real-Time</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#081226] border border-cyan-900/40 space-y-4">
+              <div className="flex items-center justify-between border-b border-cyan-900/40 pb-3">
+                <h3 className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-cyan-400" />
+                  Daftar Feedback & Komentar Anonim
+                </h3>
+                <span className="text-xs text-gray-400 font-mono">{adminFeedbacks.length} data tersimpan</span>
+              </div>
+
+              <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                {adminFeedbacks.map(f => (
+                  <div key={f.id} className="p-3 rounded-lg bg-black/40 border border-cyan-950 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-cyan-300">{f.authorName}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-800 text-gray-400 font-mono">
+                          ID: #{f.deviceId}
+                        </span>
+                        <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                          {f.deviceType === 'mobile' ? <Smartphone className="w-3 h-3 text-cyan-500" /> : <Monitor className="w-3 h-3 text-blue-500" />}
+                          {f.deviceType}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map(st => (
+                          <Star
+                            key={st}
+                            className={`w-3 h-3 ${st <= f.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {f.comment && (
+                      <p className="text-xs text-gray-300 font-sans mt-0.5">{f.comment}</p>
+                    )}
+                    <div className="text-[9px] text-gray-600 font-mono text-right">
+                      {new Date(f.createdAt).toLocaleString('id-ID')}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -2,13 +2,21 @@ import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import AdminProfileButton from './components/AdminProfileButton';
+import RatingFeedbackModal, { FeedbackHeaderWidget } from './components/RatingFeedbackModal';
 import { isAdminAuthenticated } from './lib/auth';
 import { Menu } from 'lucide-react';
 
 export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const handleOpen = () => setRatingModalOpen(true);
+    window.addEventListener('open-rating-modal', handleOpen);
+    return () => window.removeEventListener('open-rating-modal', handleOpen);
+  }, []);
 
   useEffect(() => {
     const checkMaintenance = async () => {
@@ -77,7 +85,10 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Fitur Suka & Rating Bintang 1-5 di Header Atas */}
+            <FeedbackHeaderWidget onClick={() => setRatingModalOpen(true)} />
+
             <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/40 border border-cyan-900/40 text-[10px] font-mono text-emerald-400">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>ONLINE</span>
@@ -115,6 +126,12 @@ export default function App() {
         <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 scroll-smooth w-full overscroll-contain pb-16 md:pb-6">
           <Outlet />
         </main>
+
+        {/* Modal Suka & Rating 1-5 Bintang & Komentar */}
+        <RatingFeedbackModal
+          isOpen={ratingModalOpen}
+          onClose={() => setRatingModalOpen(false)}
+        />
       </div>
     </div>
   );

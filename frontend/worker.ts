@@ -283,6 +283,87 @@ let GLOBAL_MAINTENANCE: {
   backgroundStyle: 'CYBER_DARK',
 };
 
+// ─── FITUR SUKA & RATING BINTANG 1-5 DENGAN ID UNIK PERANGKAT KONSISTEN ───
+interface FeedbackItem {
+  id: string;
+  deviceId: number;
+  authorName: string;
+  rating: number; // 1-5
+  comment: string;
+  createdAt: number;
+  deviceType: 'mobile' | 'tablet' | 'desktop';
+}
+
+let nextDeviceId = 100;
+const DEVICE_REGISTRY: Record<string, { id: number; name: string; deviceType: 'mobile' | 'tablet' | 'desktop' }> = {};
+
+const GLOBAL_FEEDBACKS: FeedbackItem[] = [
+  {
+    id: 'fb-1',
+    deviceId: 12,
+    authorName: 'Anonim 12',
+    rating: 5,
+    comment: 'Platform intelijen tercepat dan visualisasi petanya sangat memukau!',
+    createdAt: Date.now() - 3600000 * 24 * 3,
+    deviceType: 'mobile',
+  },
+  {
+    id: 'fb-2',
+    deviceId: 27,
+    authorName: 'Anonim 27',
+    rating: 5,
+    comment: 'Data seismik dan radar cuacanya akurat banget. Keren abis.',
+    createdAt: Date.now() - 3600000 * 24 * 2,
+    deviceType: 'desktop',
+  },
+  {
+    id: 'fb-3',
+    deviceId: 45,
+    authorName: 'Anonim 45',
+    rating: 4,
+    comment: 'Fitur AI analitiknya ngebantu banget pantau geopolitik global.',
+    createdAt: Date.now() - 3600000 * 18,
+    deviceType: 'mobile',
+  },
+  {
+    id: 'fb-4',
+    deviceId: 88,
+    authorName: 'Anonim 88',
+    rating: 5,
+    comment: 'Tampilannya futuristik dan responsif banget diakses lewat HP.',
+    createdAt: Date.now() - 3600000 * 5,
+    deviceType: 'mobile',
+  },
+];
+
+function resolveDeviceFingerprint(clientIP: string, ua: string, hw: string): { key: string; deviceType: 'mobile' | 'tablet' | 'desktop' } {
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  const isTablet = /iPad|Tablet/i.test(ua);
+  const deviceType: 'mobile' | 'tablet' | 'desktop' = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
+
+  let hwSig = 'desktop';
+  const androidMatch = ua.match(/Android\s+([0-9.]+)?;\s*([^;)]+)/i);
+  if (androidMatch) {
+    // Model HP Android tetap sama di Chrome, Edge, Brave, Firefox (contoh: sm-s918b / redmi note 10)
+    const rawModel = androidMatch[2].replace(/Build\/.*$/i, '').trim().toLowerCase();
+    hwSig = `android:${rawModel}`;
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    const iosModel = ua.match(/(iPhone|iPad|iPod)/i)?.[1]?.toLowerCase() || 'iphone';
+    hwSig = `ios:${iosModel}`;
+  } else if (/Windows/i.test(ua)) {
+    hwSig = 'win:desktop';
+  } else if (/Macintosh/i.test(ua)) {
+    hwSig = 'mac:desktop';
+  } else if (/Linux/i.test(ua)) {
+    hwSig = 'linux:desktop';
+  }
+
+  // hw berisi resolusi dinormalisasi (minDim x maxDim), touchPoints, dan CPU cores
+  const cleanHw = (hw || '').slice(0, 60);
+  const key = `${clientIP}::${hwSig}::${cleanHw}`;
+  return { key, deviceType };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -325,6 +406,125 @@ export default {
           return jsonResponse({
             success: true,
             status: GLOBAL_MAINTENANCE,
+          });
+        }
+
+        // [GET] /api/feedback — Ambil ringkasan suka (bintang 1-5), daftar ulasan, dan identitas unik perangkat (1 HP 1 ID)
+        if (url.pathname === '/api/feedback' && request.method === 'GET') {
+          const ua = request.headers.get('user-agent') || '';
+          const hw = url.searchParams.get('hw') || request.headers.get('x-device-hw') || '';
+          const claimedId = parseInt(url.searchParams.get('deviceId') || '0', 10);
+
+          const { key, deviceType } = resolveDeviceFingerprint(clientIP, ua, hw);
+
+          let identity = DEVICE_REGISTRY[key];
+          if (!identity) {
+            // Jika browser mengirim ID valid yang sebelumnya sudah terdaftar (misal dari cache lokal yang sama)
+            const id = claimedId >= 100 ? claimedId : nextDeviceId++;
+            if (id >= nextDeviceId) nextDeviceId = id + 1;
+            identity = {
+              id,
+              name: `Anonim ${id}`,
+              deviceType,
+            };
+            DEVICE_REGISTRY[key] = identity;
+          }
+
+          const totalRatings = GLOBAL_FEEDBACKS.length;
+          const sumRatings = GLOBAL_FEEDBACKS.reduce((acc, f) => acc + f.rating, 0);
+          const averageRating = totalRatings > 0 ? Number((sumRatings / totalRatings).toFixed(1)) : 5.0;
+
+          const ratingCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+          GLOBAL_FEEDBACKS.forEach(f => {
+            if (ratingCounts[f.rating] !== undefined) ratingCounts[f.rating]++;
+          });
+
+          const myFeedback = GLOBAL_FEEDBACKS.find(f => f.deviceId === identity.id) || null;
+
+          return jsonResponse({
+            totalRatings,
+            averageRating,
+            ratingCounts,
+            feedbacks: [...GLOBAL_FEEDBACKS].sort((a, b) => b.createdAt - a.createdAt).slice(0, 50),
+            identity,
+            myFeedback,
+          });
+        }
+
+        // [POST] /api/feedback — Kirim / Perbarui Suka (Bintang 1-5) dan Komentar
+        if (url.pathname === '/api/feedback' && request.method === 'POST') {
+          const ua = request.headers.get('user-agent') || '';
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body: any = await request.json().catch(() => ({}));
+          const hw = String(body.hw || '').slice(0, 60);
+          const claimedId = parseInt(String(body.deviceId || '0'), 10);
+
+          const { key, deviceType } = resolveDeviceFingerprint(clientIP, ua, hw);
+
+          let identity = DEVICE_REGISTRY[key];
+          if (!identity) {
+            const id = claimedId >= 100 ? claimedId : nextDeviceId++;
+            if (id >= nextDeviceId) nextDeviceId = id + 1;
+            identity = {
+              id,
+              name: `Anonim ${id}`,
+              deviceType,
+            };
+            DEVICE_REGISTRY[key] = identity;
+          }
+
+          const rawRating = parseInt(String(body.rating || '5'), 10);
+          const rating = Math.min(5, Math.max(1, isNaN(rawRating) ? 5 : rawRating));
+
+          const sanitizeText = (s: string) => s.replace(/<[^>]*>?/gm, '').trim();
+          const comment = sanitizeText(String(body.comment || '')).slice(0, 500);
+          const customName = sanitizeText(String(body.authorName || '')).slice(0, 40);
+          const authorName = customName || `Anonim ${identity.id}`;
+
+          // Cek jika ID perangkat ini sudah pernah submit ulasan
+          const existingIndex = GLOBAL_FEEDBACKS.findIndex(f => f.deviceId === identity.id);
+          let userFeedback: FeedbackItem;
+
+          if (existingIndex >= 0) {
+            GLOBAL_FEEDBACKS[existingIndex] = {
+              ...GLOBAL_FEEDBACKS[existingIndex],
+              rating,
+              comment,
+              authorName,
+              createdAt: Date.now(),
+              deviceType,
+            };
+            userFeedback = GLOBAL_FEEDBACKS[existingIndex];
+          } else {
+            userFeedback = {
+              id: `fb-${Date.now()}-${identity.id}`,
+              deviceId: identity.id,
+              authorName,
+              rating,
+              comment,
+              createdAt: Date.now(),
+              deviceType,
+            };
+            GLOBAL_FEEDBACKS.unshift(userFeedback);
+          }
+
+          const totalRatings = GLOBAL_FEEDBACKS.length;
+          const sumRatings = GLOBAL_FEEDBACKS.reduce((acc, f) => acc + f.rating, 0);
+          const averageRating = Number((sumRatings / totalRatings).toFixed(1));
+
+          const ratingCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+          GLOBAL_FEEDBACKS.forEach(f => {
+            if (ratingCounts[f.rating] !== undefined) ratingCounts[f.rating]++;
+          });
+
+          return jsonResponse({
+            success: true,
+            myFeedback: userFeedback,
+            identity,
+            totalRatings,
+            averageRating,
+            ratingCounts,
+            feedbacks: [...GLOBAL_FEEDBACKS].sort((a, b) => b.createdAt - a.createdAt).slice(0, 50),
           });
         }
 

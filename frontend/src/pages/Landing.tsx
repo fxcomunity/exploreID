@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Globe, ShieldAlert, BarChart2, CloudLightning, Leaf, Zap, Cpu, Truck, Flag, ArrowRight } from 'lucide-react';
+import { FeedbackHeroBadge } from '../components/RatingFeedbackModal';
 
 const modules = [
   { path: '/dashboard',   label: 'Global Dashboard',  icon: Globe,           desc: 'Ringkasan kondisi dunia',         color: 'border-cyan-700 hover:border-cyan-500 text-cyan-400' },
@@ -25,9 +26,13 @@ export default function Landing() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-green-400 text-xs font-bold tracking-widest">SISTEM AKTIF · DATA REAL-TIME</span>
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-green-400 text-xs font-bold tracking-widest">SISTEM AKTIF · DATA REAL-TIME</span>
+            </div>
+            {/* Fitur Suka Bintang 1-5 & Komentar Anonim */}
+            <FeedbackHeroBadge onClick={() => window.dispatchEvent(new CustomEvent('open-rating-modal'))} />
           </div>
           <div className="mb-4">
             <img
