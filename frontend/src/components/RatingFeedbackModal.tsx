@@ -168,9 +168,13 @@ export default function RatingFeedbackModal({
       <div className="relative w-full max-w-2xl bg-[#070D1E] border border-cyan-900/60 rounded-2xl shadow-2xl shadow-cyan-950/80 overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Header Modal */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-cyan-900/40 bg-[#0A122A]/80 flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/40 text-amber-400">
-              <Star className="w-5 h-5 fill-amber-400" />
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/50 flex items-center justify-center shadow-lg shadow-cyan-950/50">
+              <img
+                src="/like-globe-icon.png"
+                alt="Suka & Rating"
+                className="w-8 h-8 object-contain drop-shadow-[0_0_12px_rgba(0,229,255,0.9)]"
+              />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
@@ -503,17 +507,21 @@ export function FeedbackHeaderWidget({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       type="button"
-      className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-950/40 via-yellow-950/30 to-black/60 border border-amber-500/40 hover:border-amber-400 text-amber-300 hover:text-white transition shadow-sm hover:shadow-amber-950/50 cursor-pointer font-mono"
+      className="flex items-center gap-2 px-2 py-1 rounded-lg bg-gradient-to-r from-cyan-950/60 via-blue-950/40 to-black/70 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white transition shadow-sm hover:shadow-cyan-950/60 cursor-pointer font-mono"
       title="Beri Suka & Ulasan Sistem"
     >
-      <div className="flex items-center gap-1">
-        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-        <span className="text-xs font-bold text-amber-300">{stats.rating.toFixed(1)}</span>
+      <div className="flex items-center gap-1.5">
+        <img
+          src="/like-globe-icon.png"
+          alt="Suka"
+          className="w-5 h-5 object-contain drop-shadow-[0_0_8px_rgba(0,229,255,0.85)]"
+        />
+        <span className="text-xs font-bold text-cyan-300">{stats.rating.toFixed(1)}</span>
       </div>
       <span className="text-[10px] text-gray-400 hidden sm:inline">
         ({stats.count} Suka)
       </span>
-      <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-200 border border-amber-400/40 hidden md:inline">
+      <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-400/20 text-cyan-200 border border-cyan-400/40 hidden md:inline">
         Beri Nilai
       </span>
     </button>
@@ -548,12 +556,15 @@ export function FeedbackHeroBadge({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       type="button"
-      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition text-xs font-mono shadow-lg shadow-amber-950/40 cursor-pointer"
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-white transition text-xs font-mono shadow-lg shadow-cyan-950/40 cursor-pointer"
     >
-      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+      <img
+        src="/like-globe-icon.png"
+        alt="Suka"
+        className="w-5 h-5 object-contain drop-shadow-[0_0_8px_rgba(0,229,255,0.85)]"
+      />
       <span className="font-bold flex items-center gap-1">
-        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-        {stats.rating.toFixed(1)} / 5.0
+        <span>{stats.rating.toFixed(1)} / 5.0</span>
       </span>
       <span className="text-gray-400">({stats.count} Ulasan Suka)</span>
       <span className="text-cyan-400 hover:underline ml-1">Beri Nilai →</span>
