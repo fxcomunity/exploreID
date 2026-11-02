@@ -3,6 +3,10 @@ main = "worker.ts"
 compatibility_date = "2024-11-01"
 account_id = "5c64a232613ca2de5fcb608e65584bd4"
 
+routes = [
+  { pattern = "world-monitoring.jack-ai.my.id", custom_domain = true }
+]
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"
