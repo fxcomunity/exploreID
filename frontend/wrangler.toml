@@ -6,8 +6,6 @@ routes = [
   { pattern = "world-monitoring.jack-ai.my.id", custom_domain = true }
 ]
 
-[build]
-command = "npm install && npm run build"
 
 [assets]
 directory = "./dist"

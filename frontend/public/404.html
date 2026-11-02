@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Halaman Tidak Ditemukan | World Monitor</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: #030816;
+      color: #e2e8f0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(0, 229, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    .glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .card {
+      position: relative;
+      z-index: 10;
+      max-width: 520px;
+      width: 100%;
+      background: rgba(10, 16, 41, 0.85);
+      border: 1px solid rgba(0, 229, 255, 0.35);
+      border-radius: 20px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 229, 255, 0.15);
+      backdrop-filter: blur(16px);
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.25rem;
+      filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.7));
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+      font-weight: bold;
+    }
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+    .code {
+      font-size: 5rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.05em;
+      background: linear-gradient(180deg, #ffffff 0%, #a5f3fc 50%, #0891b2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.35));
+    }
+    .title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+    .desc {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .diagnostic {
+      background: rgba(4, 9, 24, 0.9);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      text-align: left;
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-bottom: 1.75rem;
+    }
+    .diagnostic-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.35rem;
+    }
+    .diagnostic-row:last-child { margin-bottom: 0; }
+    .val-cyan { color: #38bdf8; font-weight: bold; }
+    .val-red { color: #f87171; font-weight: bold; }
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.4rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #06b6d4 0%, #2563eb 100%);
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.55);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.2rem;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      color: #38bdf8;
+      font-weight: bold;
+      font-size: 0.8rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-secondary:hover {
+      border-color: #38bdf8;
+      background: rgba(0, 229, 255, 0.1);
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="glow"></div>
+
+  <div class="card">
+    <img src="/logo.png" alt="World Monitor" class="logo">
+    <div class="badge">
+      <span class="badge-dot"></span>
+      STATUS // 404 NOT FOUND
+    </div>
+    <div class="code">404</div>
+    <div class="title">KOORDINAT NODE TIDAK DITEMUKAN</div>
+    <div class="desc">
+      Halaman atau rute intelijen yang Anda tuju telah dipindahkan, dinonaktifkan, atau tidak terdaftar dalam radar World Monitor.
+    </div>
+
+    <div class="diagnostic">
+      <div class="diagnostic-row">
+        <span>ERROR CLASSIFICATION:</span>
+        <span class="val-red">HTTP_404_NOT_FOUND</span>
+      </div>
+      <div class="diagnostic-row">
+        <span>GATEWAY EDGE:</span>
+        <span class="val-cyan">CLOUDFLARE TIER-1 / APACHE</span>
+      </div>
+      <div class="diagnostic-row">
+        <span>SISTEM STATUS:</span>
+        <span class="val-cyan">RADAR OPERATIONAL</span>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <a href="/" class="btn-primary">
+        &larr; KEMBALI KE BERANDA
+      </a>
+      <a href="/dashboard" class="btn-secondary">
+        BUKA DASHBOARD
+      </a>
+    </div>
+  </div>
+</body>
+</html>

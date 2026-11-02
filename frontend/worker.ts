@@ -815,6 +815,15 @@ export default {
     if (response.status === 404 && !url.pathname.includes('.')) {
       const indexRequest = new Request(new URL('/', request.url), request);
       response = await env.ASSETS.fetch(indexRequest);
+    } else if (response.status === 404) {
+      const errReq = new Request(new URL('/404.html', request.url), request);
+      const errRes = await env.ASSETS.fetch(errReq);
+      if (errRes.status === 200) response = new Response(errRes.body, { status: 404, headers: errRes.headers });
+    } else if (response.status === 500 || response.status === 502 || response.status === 503 || response.status === 505) {
+      const errFile = `/${response.status}.html`;
+      const errReq = new Request(new URL(errFile, request.url), request);
+      const errRes = await env.ASSETS.fetch(errReq);
+      if (errRes.status === 200) response = new Response(errRes.body, { status: response.status, headers: errRes.headers });
     }
 
     const newHeaders = new Headers(response.headers);

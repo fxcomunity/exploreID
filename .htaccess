@@ -1,13 +1,126 @@
-RewriteEngine On
+# ==============================================================================
+# WORLD MONITOR — Apache Configuration (.htaccess)
+# Platform Pemantauan Intelijen Global Real-Time
+# https://world-monitoring.jack-ai.my.id
+# ==============================================================================
 
-RewriteRule ^public/ - [L]
-RewriteRule ^$ public/index.html [L]
-RewriteRule ^destinasi\.html$ public/pages/destinasi.html [L,QSA]
-RewriteRule ^kategori\.html$ public/pages/kategori.html [L]
-RewriteRule ^peta\.html$ public/pages/peta.html [L]
-RewriteRule ^tentang\.html$ public/pages/tentang.html [L]
-RewriteRule ^masuk\.html$ public/pages/akun/masuk.html [L]
-RewriteRule ^daftar\.html$ public/pages/akun/daftar.html [L]
-RewriteRule ^tersimpan\.html$ public/pages/pengguna/tersimpan.html [L]
-RewriteRule ^itinerary\.html$ public/pages/pengguna/itinerary.html [L]
-RewriteRule ^(.*)$ public/$1 [L]
+# ------------------------------------------------------------------------------
+# 1. HALAMAN KESALAHAN STATUS HTTP (CUSTOM ERROR DOCUMENTS)
+# ------------------------------------------------------------------------------
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html
+ErrorDocument 502 /502.html
+ErrorDocument 503 /503.html
+ErrorDocument 505 /505.html
+
+# ------------------------------------------------------------------------------
+# 2. MESIN REWRITE & SINGLE PAGE APPLICATION (SPA) FALLBACK
+# ------------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Jangan rewrite untuk file error statis
+  RewriteRule ^(404|500|502|503|505)\.html$ - [L]
+
+  # Jika file atau direktori ada di root, sajikan langsung
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Cek jika file ada di dalam frontend/dist/ (hasil build Vite)
+  RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -f [OR]
+  RewriteCond %{DOCUMENT_ROOT}/frontend/dist/$1 -d
+  RewriteRule ^(.*)$ frontend/dist/$1 [L]
+
+  # Jika URL diakses via root, arahkan ke frontend/dist/index.html (React SPA)
+  RewriteCond %{DOCUMENT_ROOT}/frontend/dist/index.html -f
+  RewriteRule ^(.*)$ frontend/dist/index.html [L]
+
+  # Fallback standar jika DocumentRoot langsung mengarah ke dist
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# 3. HEADER KEAMANAN TINGKAT TINGGI (SECURITY HEADERS)
+# ------------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  # Cegah MIME-Type Sniffing
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Perlindungan Clickjacking
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # Proteksi Filter XSS Browser
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # Kebijakan Referrer
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # HSTS (Strict-Transport-Security) — 1 Tahun
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+
+  # Kebijakan Izin Perangkat (Camera/Mic dinonaktifkan demi privasi)
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+
+  # Hapus header fingerprint server
+  Header unset Server
+  Header unset X-Powered-By
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# 4. KOMPRESI GZIP & BROTLI (PERFORMA CEPAT)
+# ------------------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE text/javascript
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE application/x-javascript
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+  AddOutputFilterByType DEFLATE text/plain
+  AddOutputFilterByType DEFLATE text/xml
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# 5. KONTROL CACHE BROWSER (BROWSER CACHING)
+# ------------------------------------------------------------------------------
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Gambar dan Ikon (1 Bulan)
+  ExpiresByType image/jpg "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/gif "access plus 1 month"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType image/x-icon "access plus 1 month"
+
+  # Asset Bundled JS dan CSS (1 Bulan dengan Vite Hash)
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+
+  # HTML selalu validasi terbaru agar SPA update langsung masuk
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# ------------------------------------------------------------------------------
+# 6. BLOKIR AKSES KE FILE SENSITIF (.env, .git, config, sql)
+# ------------------------------------------------------------------------------
+<FilesMatch "(\.(env|git|gitignore|log|sql|lock)|wrangler\.toml|package\.json|tsconfig\.json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Nonaktifkan Directory Browsing (Mencegah intip isi folder)
+Options -Indexes

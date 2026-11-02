@@ -18,6 +18,7 @@ import SettingsPage from './pages/Settings';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import MaintenancePage from './pages/MaintenancePage';
+import NotFoundPage from './pages/NotFoundPage';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './index.css';
 
@@ -47,6 +48,8 @@ const router = createBrowserRouter([
   { path: '/maintenance', element: <MaintenancePage /> },
   // Admin login — standalone (no sidebar/layout)
   { path: '/auth/admin', element: <AdminLogin /> },
+  // 404 Not Found Page (Catch-all)
+  { path: '*', element: <NotFoundPage /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
