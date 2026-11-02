@@ -1,197 +1,259 @@
-# 🌐 World Monitor — Global Real-Time Intelligence Platform
+<div align="center">
+  <img src="./frontend/public/logo.png" alt="World Monitor Logo" width="120" height="120" style="border-radius: 20px;" />
+  
+  # 🌍 World Monitor
+  ### Real-Time Global Intelligence & Situational Awareness Platform
+  
+  [![Live Production](https://img.shields.io/badge/🌐_LIVE-world--monitoring.jack--ai.my.id-00E5FF?style=for-the-badge&labelColor=0A0F24)](https://world-monitoring.jack-ai.my.id)
+  [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
+  [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+  [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
+  [![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+  [![License MIT](https://img.shields.io/badge/License-MIT-10B981?style=for-the-badge)](LICENSE)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Status-Live%20Production-00E5FF?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Live Status" />
-  <img src="https://img.shields.io/badge/Platform-Cloudflare%20Workers-F38020?style=for-the-badge&logo=cloudflareworkers&logoColor=white" alt="Cloudflare Workers" />
-  <img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite%205-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React & Vite" />
-  <img src="https://img.shields.io/badge/3D%20Engine-Three.js%20%7C%20Globe.gl-000000?style=for-the-badge&logo=threedotjs&logoColor=white" alt="Three.js" />
-  <img src="https://img.shields.io/badge/Data%20Integrity-100%25%20Real--Time%20Live-10B981?style=for-the-badge&logo=nasa&logoColor=white" alt="Real-Time Data" />
-</p>
+  <br />
 
-<p align="center">
-  <b>Platform Intelijen Geospasial & Pemantauan Global Real-Time Berstandar Enterprise.</b><br />
-  Mengintegrasikan visualisasi bola dunia 3D interaktif dengan siklus siang-malam NASA, telemetri bencana alam, analitik ekonomi makro, serta sensor kualitas udara dunia tanpa data fiktif.
-</p>
+  **Platform pemantauan intelijen global real-time berstandar enterprise.**
+  <br />
+  Mengintegrasikan satelit NASA EONET, seismograf USGS, monitor ekonomi, radar cuaca Windy,
+  <br />
+  YouTube Data API v3 untuk siaran bencana live, serta analisis AI multi-provider.
 
-<p align="center">
-  <a href="https://world-monitor.aqsholhalqi4.workers.dev" target="_blank">
-    <b>🚀 Buka Live Deployment di Cloudflare Workers</b>
-  </a>
-</p>
+  <br />
 
----
-
-## 📑 Daftar Isi
-
-- [Fitur Utama](#-fitur-utama)
-- [Modul Intelijen & Halaman](#-modul-intelijen--halaman)
-- [Sumber Data Real-Time](#-sumber-data-real-time-verified)
-- [Teknologi & Arsitektur](#-teknologi--arsitektur)
-- [Panduan Instalasi Lokal](#-panduan-instalasi-lokal)
-- [Deployment Cloudflare Workers](#-deployment-cloudflare-workers)
-- [Struktur Direktori](#-struktur-direktori)
-- [Lisensi](#-lisensi)
+  [🚀 **Open Live Platform**](https://world-monitoring.jack-ai.my.id) · [📖 Documentation](#-setup--installation) · [🛡️ Security](#️-security-features)
+</div>
 
 ---
 
-## 🌟 Fitur Utama
+## ✨ Key Features
 
-- **3D Planetary Globe (Google Earth Day & Night Cycle)**  
-  Visualisasi bumi 3D interaktif beresolusi tinggi menggunakan `globe.gl` dan custom shader Three.js. Menampilkan simulasi pencahayaan matahari aktual: sisi siang (*NASA Blue Marble*), sisi malam (*Earth at Night / City Lights*), gradien senja/fajar (*twilight terminator*), serta batas wilayah negara berdefinisi tinggi yang dapat disorot dan diklik.
-
-- **Global Statistical Intelligence (Tanpa Data Fiktif)**  
-  Pusat telemetri murni berbasis metrik kuantitatif. Menyajikan agregasi gempa bumi signifikan M5+ real-time (USGS), distribusi kebakaran, badai, banjir, dan anomali iklim aktif (NASA EONET), serta PDB resmi negara (World Bank).
-
-- **Financial & Forex Exchange Terminal (`/ekonomi`)**  
-  Papan pemantauan valas 160+ mata uang dunia (USD, IDR, EUR, GBP, JPY, CNY, SGD, AUD, dll.) dengan kalkulator konversi live, status sesi pasar finansial global (New York, London, Tokyo, Jakarta), yield obligasi negara 10-tahun, dan harga komoditas strategis (Minyak WTI, Gas Alam, Tembaga).
-
-- **Atmospheric & Air Quality Heatmap (`/lingkungan`)**  
-  Pemetaan kualitas udara global dengan integrasi sensor lapangan Open-Meteo Air Quality. Menyajikan data live indeks AQI, konsentrasi PM2.5, PM10, serta ozon (O3) pada kota-kota metropolitan dunia.
-
-- **Desain Intelijen Bersih & Natural (100% Zero-Emoji)**  
-  Antarmuka monospaced dengan palet warna cyber dark-theme, badge kode ISO negara teknis (misal: `[US]`, `[ID]`, `[JP]`, `[CN]`), tag status teknis (`[FIRE]`, `[SEISMIC]`, `[STORM]`), dan indikator tren visual natural.
-
-- **Cloudflare Edge Compute Deployment**  
-  Didistribusikan secara global melalui Cloudflare Workers dengan asset serving edge super cepat, SPA route fallback otomatis, dan header keamanan bawaan (*nosniff*, *SAMEORIGIN*, *strict-origin*).
+| Feature | Description |
+|:--------|:------------|
+| 🌐 **3D Interactive Globe** | Visualisasi bumi 3D dengan siklus siang/malam NASA, poligon negara HD, dan marker real-time |
+| 📊 **Statistical Dashboard** | Agregasi KPI: PDB World Bank, gempa USGS, kurs valas, dan bencana NASA |
+| 🔴 **Disaster & Seismic Monitor** | Pantauan gempa M4.5+ (USGS), bencana NASA EONET, siaran live YouTube 24/7 |
+| 💹 **Financial Terminal** | Kurs valas 160+ mata uang, komoditas (WTI, Gas, Tembaga), sesi pasar global |
+| 🌫️ **Air Quality Heatmap** | Sensor AQI, PM2.5, PM10, Ozon dari Open-Meteo untuk kota metropolitan |
+| ⚡ **Energy Monitor** | Data energi EIA, intensitas karbon Electricity Maps |
+| 🛰️ **Transport Radar** | Pelacakan penerbangan OpenSky ADS-B, data kapal AISStream |
+| 🤖 **AI Multi-Provider** | Auto-failover: Groq → Gemini → DeepSeek → OpenAI → Mistral → OpenRouter |
+| 🏴 **Country Intelligence** | Profil 19+ negara dengan flag emoji, skor stabilitas, dan analisis regional |
+| 📡 **Live Weather Radar** | Radar cuaca interaktif Windy dengan data Doppler global |
+| 🎥 **YouTube Live Streams** | Siaran bencana 24/7 via YouTube Data API v3 dengan filter topik |
+| 🔔 **Browser Notifications** | Notifikasi bencana via Web Push (tanpa Telegram) |
 
 ---
 
-## 🧭 Modul Intelijen & Halaman
+## 📡 Real-Time Data Sources
 
-| Halaman | Rute URL | Deskripsi Singkat |
-| :--- | :--- | :--- |
-| **Country Intelligence** | `/intelligence` | Ringkasan profil geopolitik, kestabilan negara, dan indeks komparatif. |
-| **Statistical Dashboard** | `/dashboard` | Agregasi KPI real-time: PDB World Bank, gempa USGS, valas, & bencana NASA. |
-| **Interactive 3D Globe** | `/map` | Globe 3D Google Earth dengan siklus siang/malam dan poligon negara HD. |
-| **Financial Monitor** | `/ekonomi` | Terminal kurs valas live, kalkulator konversi, dan komoditas pasar dunia. |
-| **Air Quality Monitor** | `/lingkungan` | Heatmap polusi atmosfer & telemetri sensor AQI kota-kota dunia. |
-
----
-
-## 📡 Sumber Data Real-Time (Verified)
-
-Aplikasi ini menggunakan pipeline API resmi tanpa simulasi atau data tiruan:
-
-| Sumber Data | Provider / Endpoint | Tipe Integrasi | Kegunaan |
-| :--- | :--- | :--- | :--- |
-| **Seismik & Gempa** | **USGS Earthquake Hazards Program** | REST GeoJSON Live | Gempa M5+ signifikan global (7 hari terakhir) |
-| **Bencana & Anomali** | **NASA EONET v3** | REST API Live | Kebakaran hutan, siklon tropis, erupsi vulkanik |
-| **Valuta Asing & Kurs** | **ExchangeRate-API** | REST API Verified | Nilai tukar 160+ mata uang dengan USD base |
-| **Ekonomi & PDB** | **World Bank Open Data** | REST JSON API | Data PDB nominal & inflasi tahunan resmi |
-| **Komoditas Strategis** | **Alpha Vantage Global Market** | REST API Live | Harga spot Minyak WTI, Gas Alam Henry Hub, Tembaga |
-| **Kualitas Udara (AQI)** | **Open-Meteo Air Quality** | REST API Live | Sensor PM2.5, PM10, Ozon, & US AQI per koordinat |
-| **Peta Vektor & Tiles** | **MapTiler Cloud** | Vector GL Tiles | Base map tema gelap high-contrast untuk GIS |
+| Source | Provider | Integration | Usage |
+|:-------|:---------|:------------|:------|
+| 🔬 Seismik & Gempa | **USGS Earthquake Hazards** | REST GeoJSON | Gempa M4.5+ global (7 hari) |
+| 🛰️ Bencana Alam | **NASA EONET v3** | REST API | Kebakaran, siklon, erupsi, banjir |
+| 💱 Valas & Kurs | **ExchangeRate-API** | REST API | 160+ mata uang live |
+| 📈 PDB & Ekonomi | **World Bank Open Data** | REST JSON | PDB nominal & inflasi |
+| 🛢️ Komoditas | **Alpha Vantage** | REST API | WTI, Gas Alam, Tembaga |
+| 🌬️ Kualitas Udara | **Open-Meteo** | REST API | AQI, PM2.5, PM10, Ozon |
+| ✈️ Penerbangan | **OpenSky Network** | REST API | ADS-B radar real-time |
+| ⚡ Energi | **U.S. EIA** | REST API | Data minyak & gas global |
+| 🎥 Video Live | **YouTube Data API v3** | REST API | Siaran bencana & berita |
+| 🌦️ Radar Cuaca | **Windy.com** | Embed | Radar Doppler interaktif |
+| 🗺️ Peta Vektor | **MapTiler Cloud** | Vector Tiles | Dark-theme GIS tiles |
+| 🌍 Geopolitik | **GDELT Project** | REST GeoJSON | Konflik & krisis global |
 
 ---
 
-## 🛠️ Teknologi & Arsitektur
+## 🛡️ Security Features
+
+| Layer | Protection |
+|:------|:-----------|
+| **L3/L4 DDoS** | Cloudflare built-in DDoS mitigation (automatic) |
+| **L7 Rate Limiting** | IP-based rate awareness + Cloudflare WAF rules |
+| **HSTS** | `Strict-Transport-Security` max-age 1 year + preload |
+| **XSS Protection** | `X-XSS-Protection: 1; mode=block` + CSP headers |
+| **Content Security** | `Content-Security-Policy` with strict frame-src |
+| **Clickjacking** | `X-Frame-Options: SAMEORIGIN` |
+| **MIME Sniffing** | `X-Content-Type-Options: nosniff` |
+| **Referrer** | `strict-origin-when-cross-origin` |
+| **Input Sanitization** | XSS/SQL injection vector stripping on all API inputs |
+| **Auth** | Admin panel with timing-attack resistant login flow |
+| **Permissions** | `Permissions-Policy` restricting camera/mic/geolocation |
+
+---
+
+## 🏗️ Architecture
 
 ```
-[ User Request ] ──> [ Cloudflare Edge Worker (worker.ts) ]
-                             │
-            ┌────────────────┴────────────────┐
-            ▼                                 ▼
-   [ Static SPA Assets ]            [ SPA Client Routing ]
-   (React 18 + Vite 5 + Tailwind)   (React Router v6 Fallback)
-            │
-            ▼
-   [ Real-Time Data Pipeline ]
-   ├── NASA EONET API ──────────> Bencana Alam Global
-   ├── USGS Earthquake Feed ────> Aktivitas Seismik
-   ├── World Bank API ──────────> PDB & Inflasi Riil
-   ├── ExchangeRate-API ────────> Kurs Valas 160+ Negara
-   ├── Alpha Vantage API ───────> Harga Komoditas Spot
-   └── Open-Meteo Air Quality ──> Sensor AQI & Partikulat
+┌─────────────────────────────────────────────────────────────┐
+│                    CLOUDFLARE EDGE NETWORK                  │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              worker.ts (Edge Gateway)                 │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌───────────────────┐   │  │
+│  │  │ Security │  │ API      │  │ SPA Fallback      │   │  │
+│  │  │ Headers  │  │ Router   │  │ + Asset Serving   │   │  │
+│  │  │ + Rate   │  │ + AI     │  │ + Cache Control   │   │  │
+│  │  │ Limiting │  │ Failover │  │                   │   │  │
+│  │  └──────────┘  └────┬─────┘  └───────────────────┘   │  │
+│  └──────────────────────┼───────────────────────────────┘  │
+└─────────────────────────┼───────────────────────────────────┘
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+   ┌─────────────┐ ┌─────────────┐ ┌──────────────┐
+   │ NASA EONET  │ │ USGS Quake  │ │ YouTube API  │
+   │ World Bank  │ │ Open-Meteo  │ │ ExchangeRate │
+   │ GDELT       │ │ OpenSky     │ │ Alpha Vantage│
+   │ EIA Energy  │ │ Elec. Maps  │ │ MapTiler     │
+   └─────────────┘ └─────────────┘ └──────────────┘
 ```
-
-- **Frontend Core**: React 18, TypeScript, Vite 5, Tailwind CSS.
-- **3D & Visualisasi GIS**: Three.js, `globe.gl`, MapLibre GL JS, Recharts, Lucide Icons.
-- **Runtime & Deployment**: Cloudflare Workers (dengan binding Static Assets).
 
 ---
 
-## 💻 Panduan Instalasi Lokal
+## 🧭 All Pages & Routes
 
-### 1. Kloning Repository
+| Page | Route | Description |
+|:-----|:------|:------------|
+| Landing | `/` | Animated hero & platform overview |
+| Country Intelligence | `/intelligence` | National stability scores with flag emojis |
+| Dashboard | `/dashboard` | Real-time KPI aggregation center |
+| 3D Globe | `/map` | Interactive Earth with day/night cycle |
+| Financial Monitor | `/ekonomi` | Forex terminal & commodity tracker |
+| Air Quality | `/lingkungan` | AQI heatmap & pollution sensors |
+| Geopolitical | `/geopolitik` | GDELT conflict & UN crisis reports |
+| Disaster Monitor | `/bencana` | Seismic + EONET + YouTube live streams |
+| Energy | `/energi` | EIA petroleum & carbon intensity |
+| Technology | `/teknologi` | Tech sector monitoring |
+| Transport | `/transportasi` | Flight radar & vessel tracking |
+| Data Explorer | `/data` | Raw data inspection tools |
+| Notifications | `/notifikasi` | Browser push notification center |
+| Settings | `/pengaturan` | Platform configuration |
+
+---
+
+## 💻 Setup & Installation
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### 1. Clone & Install
 ```bash
-git clone https://github.com/fxcomunity/world-monitor.git
-cd world-monitor
-```
-
-### 2. Konfigurasi Variabel Lingkungan
-Salin template `.env.example` ke file `.env` di folder frontend:
-```bash
-cp frontend/.env.example frontend/.env
-```
-Buka file `frontend/.env` dan lengkapi API key Anda:
-```env
-VITE_MAPTILER_KEY=isi_key_maptiler_anda
-VITE_EXCHANGERATE_KEY=isi_key_exchangerate_anda
-VITE_ALPHAVANTAGE_KEY=isi_key_alphavantage_anda
-```
-
-### 3. Jalankan Aplikasi
-```bash
-cd frontend
+git clone https://github.com/your-repo/world-monitor.git
+cd world-monitor/frontend
 npm install
+```
+
+### 2. Configure Environment
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your API keys:
+```env
+# Required
+VITE_MAPTILER_KEY=your_maptiler_key
+VITE_EXCHANGERATE_KEY=your_exchangerate_key
+
+# Optional (AI Multi-Provider)
+VITE_GEMINI_KEY=your_gemini_key
+VITE_GROQ_KEY=your_groq_key
+VITE_DEEPSEEK_KEY=your_deepseek_key
+VITE_OPENAI_KEY=your_openai_key
+
+# Optional (Monitors)
+VITE_YOUTUBE_KEY=your_youtube_data_api_v3_key
+VITE_ALPHAVANTAGE_KEY=your_alphavantage_key
+VITE_EIA_KEY=your_eia_key
+```
+
+### 3. Run Development Server
+```bash
 npm run dev
 ```
-Akses aplikasi melalui browser di **`http://localhost:5173`**.
+Open `http://localhost:5173` in your browser.
 
----
-
-## ☁️ Deployment Cloudflare Workers
-
-Aplikasi ini sudah dilengkapi skrip deployment satu-klik menggunakan Cloudflare Wrangler:
-
+### 4. Build for Production
 ```bash
-cd frontend
+npm run build
+```
+
+### 5. Deploy to Cloudflare Workers
+```bash
 npm run deploy
 ```
 
-Perintah di atas akan secara otomatis:
-1. Menjalankan kompilasi TypeScript dan bundler Vite (`vite build`).
-2. Mengunggah aset yang diperbarui ke Cloudflare Assets Cache.
-3. Memperbarui skrip `worker.ts` di jaringan edge Cloudflare secara instan.
-
-Untuk mencoba server lokal Worker sebelum deploy:
-```bash
-npm run worker:dev
-```
-
 ---
 
-## 📁 Struktur Direktori
+## 📁 Project Structure
 
 ```
 world-monitor/
-├── .env.example                # Template variabel lingkungan root
-├── package.json                # Root proxy scripts
-├── README.md                   # Dokumentasi resmi proyek
-├── world_monitor_schema.sql    # Skema PostgreSQL (Neon DB)
-│
-└── frontend/                   # Aplikasi Frontend & Cloudflare Worker
-    ├── .env.example            # Template variabel lingkungan frontend
-    ├── package.json            # Dependencies & deployment scripts
-    ├── vite.config.ts          # Konfigurasi bundler Vite
-    ├── wrangler.toml           # Konfigurasi Cloudflare Workers
-    ├── worker.ts               # Skrip Edge Worker (SPA fallback & caching)
-    └── src/
-        ├── App.tsx             # Root Layout (Sidebar, Header, Main content)
-        ├── main.tsx            # Routing & RouterProvider
-        ├── lib/
-        │   └── api.ts          # Integrasi terpusat seluruh API real-time
-        └── pages/
-            ├── Home.tsx            # Analisis Intelijen Negara
-            ├── Dashboard.tsx       # Pusat Analitik Statistik Murni
-            ├── Map.tsx             # Globe 3D Google Earth Day/Night
-            ├── EconomicMonitor.tsx # Terminal Finansial & Valas Real-Time
-            ├── Environment.tsx     # Kualitas Udara & Polusi Atmosfer
-            └── Landing.tsx         # Halaman Pengantar Platform
+├── README.md
+├── frontend/
+│   ├── worker.ts              # Cloudflare Edge Worker (API Gateway + Security)
+│   ├── wrangler.toml           # Cloudflare Workers config
+│   ├── vite.config.ts          # Vite bundler config
+│   ├── index.html              # SPA entry + OG meta tags
+│   ├── public/
+│   │   ├── logo.png            # Platform logo
+│   │   └── favicon.png         # Favicon
+│   └── src/
+│       ├── App.tsx             # Root layout (Sidebar + Mobile drawer)
+│       ├── main.tsx            # React Router v6 routes
+│       ├── index.css            # Global styles + scroll behavior
+│       ├── lib/
+│       │   └── api.ts          # Centralized API integration layer
+│       ├── components/
+│       │   └── Sidebar.tsx     # Desktop collapsible + mobile drawer
+│       └── pages/
+│           ├── Landing.tsx      # Hero landing page
+│           ├── Home.tsx         # Country Intelligence (with flags)
+│           ├── Dashboard.tsx    # Statistical KPI Dashboard
+│           ├── Map.tsx          # 3D Globe (Three.js + globe.gl)
+│           ├── EconomicMonitor.tsx
+│           ├── Environment.tsx
+│           ├── GeopoliticalMonitor.tsx
+│           ├── DisasterMonitor.tsx
+│           ├── EnergyMonitor.tsx
+│           ├── TechMonitor.tsx
+│           ├── TransportMonitor.tsx
+│           ├── DataExplorer.tsx
+│           ├── NotificationCenter.tsx
+│           ├── Settings.tsx
+│           └── AdminLogin.tsx   # Hidden admin auth (/auth/admin)
 ```
 
 ---
 
-## 📄 Lisensi
+## 🤝 Tech Stack
 
-Didistribusikan di bawah Lisensi MIT. Bebas digunakan untuk keperluan riset, akademis, dan pengembangan sistem situational awareness.
+| Layer | Technology |
+|:------|:-----------|
+| **Frontend** | React 18, TypeScript 5, Vite 5, Tailwind CSS |
+| **3D/GIS** | Three.js, globe.gl, MapLibre GL JS |
+| **Charts** | Recharts |
+| **Icons** | Lucide React |
+| **Runtime** | Cloudflare Workers (Edge Compute) |
+| **AI** | Multi-provider failover (6 providers) |
+| **Security** | CSP, HSTS, XSS Protection, Rate Limiting |
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. Free for research, academic, and situational awareness system development.
+
+---
+
+<div align="center">
+  <br />
+  <img src="./frontend/public/logo.png" alt="World Monitor" width="40" height="40" style="border-radius: 8px;" />
+  <br />
+  <b>World Monitor</b> — Global Real-Time Intelligence Platform
+  <br />
+  <a href="https://world-monitoring.jack-ai.my.id">world-monitoring.jack-ai.my.id</a>
+  <br /><br />
+  Built with ❤️ and ☕ for a safer world.
+</div>

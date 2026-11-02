@@ -7,7 +7,17 @@ import Dashboard from './pages/Dashboard';
 import MapPage from './pages/Map';
 import Environment from './pages/Environment';
 import EconomicMonitor from './pages/EconomicMonitor';
-import ComingSoon from './components/ComingSoon';
+import GeopoliticalMonitor from './pages/GeopoliticalMonitor';
+import DisasterMonitor from './pages/DisasterMonitor';
+import EnergyMonitor from './pages/EnergyMonitor';
+import TechMonitor from './pages/TechMonitor';
+import TransportMonitor from './pages/TransportMonitor';
+import DataExplorer from './pages/DataExplorer';
+import NotificationCenter from './pages/NotificationCenter';
+import SettingsPage from './pages/Settings';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import MaintenancePage from './pages/MaintenancePage';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './index.css';
 
@@ -21,16 +31,21 @@ const router = createBrowserRouter([
       { path: '/map',           element: <MapPage /> },
       { path: '/lingkungan',    element: <Environment /> },
       { path: '/ekonomi',       element: <EconomicMonitor /> },
-      { path: '/geopolitik',    element: <ComingSoon title="Geopolitical Monitor" badge="GEOPOLITIK" /> },
-      { path: '/bencana',       element: <ComingSoon title="Disaster Monitor" badge="BENCANA" /> },
-      { path: '/energi',        element: <ComingSoon title="Energy Monitor" badge="ENERGI" /> },
-      { path: '/teknologi',     element: <ComingSoon title="Technology & Science Monitor" badge="TEKNOLOGI" /> },
-      { path: '/transportasi',  element: <ComingSoon title="Transport Monitor" badge="TRANSPORTASI" /> },
-      { path: '/data',          element: <ComingSoon title="Data Explorer" badge="DATABASE" /> },
-      { path: '/notifikasi',    element: <ComingSoon title="Notification Center" badge="NOTIFIKASI" /> },
-      { path: '/pengaturan',    element: <ComingSoon title="Pengaturan Sistem" badge="KONFIGURASI" /> },
+      { path: '/geopolitik',    element: <GeopoliticalMonitor /> },
+      { path: '/bencana',       element: <DisasterMonitor /> },
+      { path: '/energi',        element: <EnergyMonitor /> },
+      { path: '/teknologi',     element: <TechMonitor /> },
+      { path: '/transportasi',  element: <TransportMonitor /> },
+      { path: '/data',          element: <DataExplorer /> },
+      { path: '/notifikasi',    element: <NotificationCenter /> },
+      { path: '/pengaturan',    element: <SettingsPage /> },
+      { path: '/admin/dashboard', element: <AdminDashboard /> },
     ],
   },
+  // Dedicated Maintenance Page (Fullscreen)
+  { path: '/maintenance', element: <MaintenancePage /> },
+  // Admin login — standalone (no sidebar/layout)
+  { path: '/auth/admin', element: <AdminLogin /> },
 ]);
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(

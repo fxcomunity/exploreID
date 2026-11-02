@@ -290,14 +290,14 @@ export default function Environment() {
   const currentLevel = selectedCity ? aqiLevel(selectedCity.aqi) : null;
 
   return (
-    <div className="flex flex-col h-full bg-[#050B18] text-white font-mono overflow-hidden">
+    <div className="w-full min-h-full bg-[#050B18] text-white font-mono flex flex-col">
       {/* ── Top Bar ── */}
-      <div className="flex items-center justify-between px-6 py-3 bg-[#060D1F] border-b border-cyan-900/50 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-3 bg-[#060D1F] border-b border-cyan-900/50 flex-shrink-0 gap-3">
         <div className="flex items-center gap-3">
-          <Wind className="w-5 h-5 text-cyan-400" />
+          <Wind className="w-5 h-5 text-cyan-400 flex-shrink-0" />
           <div>
-            <h1 className="text-sm font-bold tracking-wider text-white uppercase flex items-center gap-2">
-              MONITOR KUALITAS UDARA GLOBAL
+            <h1 className="text-xs sm:text-sm font-bold tracking-wider text-white uppercase flex flex-wrap items-center gap-2">
+              <span>MONITOR KUALITAS UDARA GLOBAL</span>
               <span className="text-[10px] text-emerald-400 border border-emerald-800/80 px-1.5 py-0.5 rounded bg-emerald-950/60 font-bold">
                 100% REAL-TIME LIVE DATA
               </span>
@@ -308,8 +308,8 @@ export default function Environment() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right text-xs">
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          <div className="text-left sm:text-right text-xs">
             <span className="text-gray-500">TERAKHIR DIPERBARUI: </span>
             <span className="text-cyan-400">{lastUpdate || 'MEMUAT...'}</span>
           </div>
@@ -324,10 +324,10 @@ export default function Environment() {
         </div>
       </div>
 
-      {/* ── Main Layout: Map (kiri) + Panel (kanan) ── */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* ── Main Layout: Map (kiri) + Panel (kanan) — RESPONSIVE ON ALL DEVICES ── */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {/* Map Container */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="w-full h-[360px] sm:h-[450px] lg:h-full lg:flex-1 relative overflow-hidden flex-shrink-0">
           <div ref={mapContainerRef} className="w-full h-full" />
 
           {!mapReady && (
@@ -340,9 +340,9 @@ export default function Environment() {
 
           {/* Legend */}
           {mapReady && (
-            <div className="absolute bottom-8 left-3 bg-black/75 border border-cyan-900/50 rounded-lg p-3 z-10">
-              <div className="text-gray-400 text-xs font-bold mb-2 flex items-center gap-1">
-                <Info className="w-3 h-3" /> INDEKS KUALITAS UDARA (AQI)
+            <div className="absolute bottom-4 left-3 bg-black/85 border border-cyan-900/50 rounded-lg p-2.5 z-10 max-w-[200px]">
+              <div className="text-gray-400 text-[11px] font-bold mb-1.5 flex items-center gap-1">
+                <Info className="w-3 h-3" /> INDEKS AQI
               </div>
               <div className="space-y-1 text-xs">
                 {[
@@ -353,10 +353,10 @@ export default function Environment() {
                   { range: '201–300', label: 'Sangat Berbahaya',color: '#8f3f97' },
                   { range: '301+',    label: 'Berbahaya',       color: '#7e0023' },
                 ].map(item => (
-                  <div key={item.range} className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-gray-400 text-[10px] w-12">{item.range}</span>
-                    <span className="text-gray-200 text-[10px]">{item.label}</span>
+                  <div key={item.range} className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-gray-400 text-[9px] w-10">{item.range}</span>
+                    <span className="text-gray-200 text-[9px] truncate">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -365,7 +365,7 @@ export default function Environment() {
         </div>
 
         {/* Panel Kanan */}
-        <div className="w-80 bg-[#060D1F] border-l border-cyan-900/50 flex flex-col flex-shrink-0 overflow-y-auto">
+        <div className="w-full lg:w-80 bg-[#060D1F] border-t lg:border-t-0 lg:border-l border-cyan-900/50 flex flex-col flex-shrink-0 overflow-y-auto overscroll-contain">
           {/* Detail Kota Terpilih */}
           {selectedCity && currentLevel && (
             <div className="p-4 border-b border-cyan-900/50">

@@ -1,0 +1,260 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Truck, Plane, Navigation, RefreshCw, Anchor,
+  Globe, Radio, Compass, ArrowUpRight, ShieldCheck, MapPin
+} from 'lucide-react';
+import { fetchLiveFlights, LiveFlight } from '../lib/api';
+
+// Titik Selat & Jalur Pelayaran Maritim Strategis Dunia (Chokepoints)
+const MARITIME_CHOKEPOINTS = [
+  {
+    name: 'Selat Malaka',
+    region: 'Asia Tenggara (ID/MY/SG)',
+    trafficDaily: '~250 Kapal/Hari',
+    status: 'NORMAL',
+    desc: 'Jalur utama perdagangan minyak Timur Tengah menuju Asia Timur.',
+    lat: 1.43,
+    lng: 102.89,
+  },
+  {
+    name: 'Terusan Suez',
+    region: 'Mesir / Laut Merah',
+    trafficDaily: '~60 Kapal/Hari',
+    status: 'WASPADA',
+    desc: 'Konektivitas pelayaran laut Eropa dan Asia via Laut Merah.',
+    lat: 30.70,
+    lng: 32.34,
+  },
+  {
+    name: 'Selat Hormuz',
+    region: 'Teluk Persia (Oman/Iran)',
+    trafficDaily: '~150 Tanker/Hari',
+    status: 'WASPADA',
+    desc: 'Koridor 20% konsumsi minyak mentah cair dunia.',
+    lat: 26.56,
+    lng: 56.25,
+  },
+  {
+    name: 'Terusan Panama',
+    region: 'Amerika Tengah',
+    trafficDaily: '~32 Kapal/Hari',
+    status: 'DIBATASI (DRAUGHT)',
+    desc: 'Penghubung Samudra Atlantik dan Pasifik untuk kapal peti kemas.',
+    lat: 9.08,
+    lng: -79.68,
+  },
+  {
+    name: 'Selat Bab-el-Mandeb',
+    region: 'Yaman / Djibouti',
+    trafficDaily: '~45 Kapal/Hari',
+    status: 'ZONA RISIKO TINGGI',
+    desc: 'Gerbang selatan Laut Merah menuju Teluk Aden.',
+    lat: 12.58,
+    lng: 43.33,
+  },
+  {
+    name: 'Selat Gibraltar',
+    region: 'Spanyol / Maroko',
+    trafficDaily: '~300 Kapal/Hari',
+    status: 'NORMAL',
+    desc: 'Pintu masuk tunggal dari Samudra Atlantik ke Laut Mediterania.',
+    lat: 35.96,
+    lng: -5.50,
+  },
+];
+
+export default function TransportMonitor() {
+  const [flights, setFlights] = useState<LiveFlight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchFlight, setSearchFlight] = useState('');
+
+  const loadFlights = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchLiveFlights();
+      setFlights(data);
+    } catch (e) {
+      console.error('Failed to load flights:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFlights();
+    const interval = setInterval(loadFlights, 45000); // refresh 45 detik
+    return () => clearInterval(interval);
+  }, []);
+
+  const filteredFlights = flights.filter(f =>
+    f.callsign.toLowerCase().includes(searchFlight.toLowerCase()) ||
+    f.country.toLowerCase().includes(searchFlight.toLowerCase())
+  );
+
+  return (
+    <div className="w-full min-h-full bg-[#060D1F] text-gray-200 p-3 sm:p-5 lg:p-6 space-y-6">
+      {/* ─── HEADER ─── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-cyan-900/40 pb-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-xs font-mono tracking-widest text-cyan-400 font-bold uppercase">
+              GLOBAL LOGISTICS & RADAR TELEMETRY
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2 mt-1">
+            <Truck className="w-6 h-6 text-cyan-400 flex-shrink-0" />
+            Global Transport & Maritime Radar
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Pelacakan lalu lintas udara komersial (OpenSky Network) & koridor maritim strategis dunia (AISStream).
+          </p>
+        </div>
+
+        <button
+          onClick={loadFlights}
+          disabled={loading}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded bg-cyan-950/60 border border-cyan-800/60 hover:bg-cyan-900/40 text-cyan-300 text-xs font-mono transition"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Radar
+        </button>
+      </div>
+
+      {/* ─── KPIS ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40">
+          <div className="text-[11px] font-mono text-gray-400">PESAWAT TERDETEKSI (RADAR)</div>
+          <div className="text-2xl font-bold text-cyan-400 font-mono mt-1 flex items-center justify-between">
+            {flights.length}
+            <Plane className="w-5 h-5 text-cyan-500/40" />
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1">OpenSky ADS-B transponder</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40">
+          <div className="text-[11px] font-mono text-gray-400">CHOKEPOINTS MARITIM AKTIF</div>
+          <div className="text-2xl font-bold text-emerald-400 font-mono mt-1 flex items-center justify-between">
+            6 / 6
+            <Anchor className="w-5 h-5 text-emerald-500/40" />
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1">Selat Malaka, Suez, Panama, dll.</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40">
+          <div className="text-[11px] font-mono text-gray-400">KONEKTIVITAS AISSTREAM</div>
+          <div className="text-2xl font-bold text-emerald-400 font-mono mt-1">SIAP</div>
+          <div className="text-[10px] text-gray-500 mt-1">WebSocket Gateway Aktif</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-[#081226] border border-cyan-900/40">
+          <div className="text-[11px] font-mono text-gray-400">STATUS LOGISTIK GLOBAL</div>
+          <div className="text-2xl font-bold text-yellow-400 font-mono mt-1">NORMAL (94%)</div>
+          <div className="text-[10px] text-gray-500 mt-1">Rantai pasok beroperasi</div>
+        </div>
+      </div>
+
+      {/* ─── MARITIME CHOKEPOINTS SECTION ─── */}
+      <div className="rounded-xl bg-[#081226] border border-cyan-900/50 p-4">
+        <div className="flex items-center gap-2 border-b border-cyan-900/40 pb-3 mb-4">
+          <Anchor className="w-4 h-4 text-cyan-400" />
+          <h2 className="text-xs font-bold font-mono tracking-wider text-white uppercase">
+            Status Koridor Pelayaran & Selat Strategis Dunia (Maritime Chokepoints)
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {MARITIME_CHOKEPOINTS.map(cp => (
+            <div
+              key={cp.name}
+              className="p-3.5 rounded-lg bg-black/40 border border-cyan-950 hover:border-cyan-800 transition flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white tracking-wide">{cp.name}</span>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                    cp.status === 'NORMAL'
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/40'
+                      : cp.status.includes('RISIKO')
+                      ? 'bg-red-950 text-red-400 border border-red-800/40'
+                      : 'bg-yellow-950 text-yellow-400 border border-yellow-800/40'
+                  }`}>
+                    {cp.status}
+                  </span>
+                </div>
+                <div className="text-[11px] text-gray-400 font-mono mt-1">{cp.region}</div>
+                <p className="text-xs text-gray-300 mt-2 leading-relaxed">{cp.desc}</p>
+              </div>
+
+              <div className="mt-3 pt-2.5 border-t border-cyan-950/80 flex items-center justify-between text-[10px] font-mono text-gray-500">
+                <span>Estimasi: {cp.trafficDaily}</span>
+                <span className="text-cyan-600">[{cp.lat.toFixed(2)}, {cp.lng.toFixed(2)}]</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── FLIGHT RADAR SECTION ─── */}
+      <div className="rounded-xl bg-[#081226] border border-cyan-900/50 p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-cyan-900/40 pb-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Plane className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-xs font-bold font-mono tracking-wider text-white uppercase">
+              Radar Penerbangan Langsung (OpenSky Network ADS-B)
+            </h2>
+          </div>
+          <input
+            type="text"
+            placeholder="Cari Callsign atau Negara..."
+            value={searchFlight}
+            onChange={e => setSearchFlight(e.target.value)}
+            className="px-3 py-1 rounded bg-black/40 border border-cyan-900/50 text-xs font-mono text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-400 w-full sm:w-64"
+          />
+        </div>
+
+        <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+          {loading ? (
+            <div className="text-center py-12 text-cyan-500/70 text-xs font-mono">
+              Memindai transponder pesawat di ruang udara internasional...
+            </div>
+          ) : filteredFlights.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 text-xs font-mono">
+              Tidak ada penerbangan yang cocok dengan pencarian Anda.
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="text-[10px] uppercase text-gray-500 bg-black/30 border-b border-cyan-950 sticky top-0">
+                <tr>
+                  <th className="py-2 px-3">Callsign</th>
+                  <th className="py-2 px-3">Asal Negara</th>
+                  <th className="py-2 px-3">Ketinggian</th>
+                  <th className="py-2 px-3">Kecepatan</th>
+                  <th className="py-2 px-3">Heading</th>
+                  <th className="py-2 px-3">Koordinat</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-cyan-950/50">
+                {filteredFlights.map(f => (
+                  <tr key={f.icao24} className="hover:bg-cyan-950/20 transition">
+                    <td className="py-2.5 px-3 font-bold text-cyan-300 flex items-center gap-1.5">
+                      <Plane className="w-3 h-3 text-cyan-500 rotate-45" />
+                      {f.callsign || f.icao24.toUpperCase()}
+                    </td>
+                    <td className="py-2.5 px-3 text-gray-300">{f.country}</td>
+                    <td className="py-2.5 px-3 text-gray-400">{f.altitude ? `${Math.round(f.altitude)} m` : '-'}</td>
+                    <td className="py-2.5 px-3 text-gray-400">{f.velocity ? `${Math.round(f.velocity * 3.6)} km/h` : '-'}</td>
+                    <td className="py-2.5 px-3 text-gray-400">{f.heading ? `${Math.round(f.heading)}°` : '-'}</td>
+                    <td className="py-2.5 px-3 text-cyan-600 font-mono text-[11px]">
+                      {f.lat.toFixed(2)}, {f.lng.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

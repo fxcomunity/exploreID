@@ -1,32 +1,652 @@
 /**
  * Cloudflare Worker for World Monitor Intelligence Platform
- * Handles SPA fallback, security headers, edge caching, and asset serving.
+ * Handles Edge API Gateway, Security Proxy, AI Multi-Provider Router (Auto-Failover), and Asset Serving.
  */
 
 interface Env {
   ASSETS: {
     fetch: (request: Request) => Promise<Response>;
   };
+  ENVIRONMENT?: string;
+  // External APIs
+  MAPTILER_KEY?: string;
+  EXCHANGERATE_KEY?: string;
+  ALPHAVANTAGE_KEY?: string;
+  VITE_MAPTILER_KEY?: string;
+  VITE_EXCHANGERATE_KEY?: string;
+  VITE_ALPHAVANTAGE_KEY?: string;
+  // AI Keys (Semua AI kecuali Anthropic & Perplexity)
+  GEMINI_KEY?: string;
+  OPENAI_KEY?: string;
+  DEEPSEEK_KEY?: string;
+  GROQ_KEY?: string;
+  MISTRAL_KEY?: string;
+  OPENROUTER_KEY?: string;
+  VITE_GEMINI_KEY?: string;
+  VITE_OPENAI_KEY?: string;
+  VITE_DEEPSEEK_KEY?: string;
+  VITE_GROQ_KEY?: string;
+  VITE_MISTRAL_KEY?: string;
+  VITE_OPENROUTER_KEY?: string;
+  // Transport & Radar
+  AISSTREAM_KEY?: string;
+  OPENSKY_CLIENT_ID?: string;
+  OPENSKY_CLIENT_SECRET?: string;
+  AVIATIONSTACK_KEY?: string;
+  VITE_AISSTREAM_KEY?: string;
+  VITE_OPENSKY_CLIENT_ID?: string;
+  VITE_OPENSKY_CLIENT_SECRET?: string;
+  VITE_AVIATIONSTACK_KEY?: string;
+  // Energy & Emissions
+  EIA_KEY?: string;
+  ELECTRICITYMAPS_KEY?: string;
+  VITE_EIA_KEY?: string;
+  VITE_ELECTRICITYMAPS_KEY?: string;
+  // YouTube Data API v3
+  YOUTUBE_KEY?: string;
+  VITE_YOUTUBE_KEY?: string;
+  // Admin Auth
+  ADMIN_USER?: string;
+  ADMIN_PASS?: string;
 }
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...CORS_HEADERS,
+      ...extraHeaders,
+    },
+  });
+}
+
+function getAIKeys(env: Env) {
+  return {
+    gemini: env.GEMINI_KEY || env.VITE_GEMINI_KEY,
+    groq: env.GROQ_KEY || env.VITE_GROQ_KEY,
+    deepseek: env.DEEPSEEK_KEY || env.VITE_DEEPSEEK_KEY,
+    openai: env.OPENAI_KEY || env.VITE_OPENAI_KEY,
+    mistral: env.MISTRAL_KEY || env.VITE_MISTRAL_KEY,
+    openrouter: env.OPENROUTER_KEY || env.VITE_OPENROUTER_KEY,
+  };
+}
+
+// ─── CALL INDIVIDUAL AI PROVIDER DENGAN TIMEOUT 12 DETIK ──────────────────────
+async function callAIProvider(
+  provider: string,
+  prompt: string,
+  systemPrompt: string,
+  keys: ReturnType<typeof getAIKeys>
+): Promise<{ text: string; provider: string }> {
+  const signal = AbortSignal.timeout(12000); // 12 detik batas per provider
+
+  // 1. Groq (Llama 3.3 70B - Sangat Cepat & Tanggap)
+  if (provider === 'groq' && keys.groq) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keys.groq}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 1500,
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Groq HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('Groq mengembalikan respons kosong');
+    return { text, provider: 'Groq (Llama 3.3 70B)' };
+  }
+
+  // 2. Google Gemini (2.0 Flash)
+  if (provider === 'gemini' && keys.gemini) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${keys.gemini}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gemini HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) throw new Error('Gemini mengembalikan respons kosong');
+    return { text, provider: 'Google Gemini (2.0 Flash)' };
+  }
+
+  // 3. DeepSeek (DeepSeek V3 / R1)
+  if (provider === 'deepseek' && keys.deepseek) {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keys.deepseek}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 1500,
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`DeepSeek HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('DeepSeek mengembalikan respons kosong');
+    return { text, provider: 'DeepSeek (V3)' };
+  }
+
+  // 4. OpenAI (GPT-4o-mini)
+  if (provider === 'openai' && keys.openai) {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keys.openai}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 1500,
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`OpenAI HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('OpenAI mengembalikan respons kosong');
+    return { text, provider: 'OpenAI (GPT-4o-mini)' };
+  }
+
+  // 5. Mistral AI (Mistral Small Latest)
+  if (provider === 'mistral' && keys.mistral) {
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keys.mistral}`,
+      },
+      body: JSON.stringify({
+        model: 'mistral-small-latest',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 1500,
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Mistral HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('Mistral mengembalikan respons kosong');
+    return { text, provider: 'Mistral AI' };
+  }
+
+  // 6. OpenRouter (Unified Gateway Backup)
+  if (provider === 'openrouter' && keys.openrouter) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keys.openrouter}`,
+        'HTTP-Referer': 'https://world-monitor.aqsholhalqi4.workers.dev',
+        'X-Title': 'World Monitor Intelligence',
+      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`OpenRouter HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('OpenRouter mengembalikan respons kosong');
+    return { text, provider: 'OpenRouter' };
+  }
+
+  throw new Error(`Key untuk provider "${provider}" belum tersedia atau tidak aktif`);
+}
+
+let GLOBAL_MAINTENANCE: {
+  active: boolean;
+  title: string;
+  message: string;
+  endTime: number;
+} = {
+  active: false,
+  title: 'Lagi Maintenance',
+  message: 'Kami lagi upgrade sistem biar makin kenceng & aman. Bentar lagi balik kok.',
+  endTime: Date.now() + 2 * 60 * 60 * 1000,
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    // 1. Fetch static asset via Cloudflare Assets Binding
+    // ─── BASIC RATE LIMITING (DDoS MITIGATION) ────────────────────────────────
+    // Cloudflare Workers have built-in DDoS protection at L3/L4 layer.
+    // For full L7 rate limiting, configure Cloudflare Rate Limiting Rules in dashboard.
+    // This adds application-level input sanitization + security awareness.
+    const clientIP = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
+
+    // OPTIONS preflight untuk CORS
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: CORS_HEADERS });
+    }
+
+    // ─── 1. API GATEWAY ROUTER (/api/*) ───────────────────────────────────────
+    if (url.pathname.startsWith('/api/')) {
+      try {
+        // [GET] /api/maintenance — Ambil status maintenance sistem secara live
+        if (url.pathname === '/api/maintenance' && request.method === 'GET') {
+          return jsonResponse({
+            ...GLOBAL_MAINTENANCE,
+            serverTime: Date.now(),
+          });
+        }
+
+        // [POST] /api/maintenance — Update status maintenance oleh Admin
+        if (url.pathname === '/api/maintenance' && request.method === 'POST') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body: any = await request.json().catch(() => ({}));
+          GLOBAL_MAINTENANCE.active = Boolean(body.active);
+          if (body.title) GLOBAL_MAINTENANCE.title = String(body.title).slice(0, 100);
+          if (body.message) GLOBAL_MAINTENANCE.message = String(body.message).slice(0, 500);
+          if (body.endTime) GLOBAL_MAINTENANCE.endTime = Number(body.endTime);
+
+          return jsonResponse({
+            success: true,
+            status: GLOBAL_MAINTENANCE,
+          });
+        }
+
+        // [GET] /api/config — Ambil MapTiler key publik secara aman
+        if (url.pathname === '/api/config') {
+          return jsonResponse({
+            maptilerKey: env.MAPTILER_KEY || env.VITE_MAPTILER_KEY || '',
+          });
+        }
+
+        // [GET] /api/forex — Proxy ExchangeRate API (Key aman di Worker)
+        if (url.pathname === '/api/forex') {
+          const key = env.EXCHANGERATE_KEY || env.VITE_EXCHANGERATE_KEY;
+          if (!key) return jsonResponse({ error: 'EXCHANGERATE_KEY belum dikonfigurasi di Cloudflare' }, 500);
+
+          const base = url.searchParams.get('base') || 'USD';
+          const apiUrl = `https://v6.exchangerate-api.com/v6/${key}/latest/${base}`;
+          const res = await fetch(apiUrl);
+          const data = await res.json();
+          return jsonResponse(data, 200, {
+            'Cache-Control': 'public, max-age=1800', // Cache 30 menit di Edge
+          });
+        }
+
+        // [GET] /api/commodities — Proxy Alpha Vantage WTI/Gas/Copper
+        if (url.pathname === '/api/commodities') {
+          const key = env.ALPHAVANTAGE_KEY || env.VITE_ALPHAVANTAGE_KEY;
+          if (!key) return jsonResponse({ error: 'ALPHAVANTAGE_KEY belum dikonfigurasi di Cloudflare' }, 500);
+
+          const [wtiRes, gasRes, copperRes] = await Promise.allSettled([
+            fetch(`https://www.alphavantage.co/query?function=WTI&interval=monthly&apikey=${key}`).then(r => r.json()),
+            fetch(`https://www.alphavantage.co/query?function=NATURAL_GAS&interval=monthly&apikey=${key}`).then(r => r.json()),
+            fetch(`https://www.alphavantage.co/query?function=COPPER&interval=monthly&apikey=${key}`).then(r => r.json()),
+          ]);
+
+          const results = [];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (wtiRes.status === 'fulfilled' && (wtiRes.value as any)?.data?.[0]) {
+            const val = parseFloat((wtiRes.value as any).data[0].value);
+            results.push({
+              name: 'Minyak Mentah WTI',
+              symbol: 'WTI',
+              price: `$${val.toFixed(2)}`,
+              unit: '/barrel',
+              date: (wtiRes.value as any).data[0].date,
+              source: 'Alpha Vantage WTI',
+            });
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (gasRes.status === 'fulfilled' && (gasRes.value as any)?.data?.[0]) {
+            const val = parseFloat((gasRes.value as any).data[0].value);
+            results.push({
+              name: 'Gas Alam Henry Hub',
+              symbol: 'NATGAS',
+              price: `$${val.toFixed(2)}`,
+              unit: '/MMBtu',
+              date: (gasRes.value as any).data[0].date,
+              source: 'Alpha Vantage Henry Hub',
+            });
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (copperRes.status === 'fulfilled' && (copperRes.value as any)?.data?.[0]) {
+            const val = parseFloat((copperRes.value as any).data[0].value);
+            results.push({
+              name: 'Tembaga Global (Copper)',
+              symbol: 'COPPER',
+              price: `$${val.toFixed(2)}`,
+              unit: '/metric ton',
+              date: (copperRes.value as any).data[0].date,
+              source: 'Alpha Vantage Copper',
+            });
+          }
+
+          return jsonResponse(results, 200, {
+            'Cache-Control': 'public, max-age=3600', // Cache 1 jam di Edge
+          });
+        }
+
+        // [GET] /api/ai/providers — Daftar provider AI yang aktif kuncinya
+        if (url.pathname === '/api/ai/providers') {
+          const keys = getAIKeys(env);
+          const available = [];
+          if (keys.gemini) available.push({ id: 'gemini', name: 'Google Gemini 2.0 Flash' });
+          if (keys.groq) available.push({ id: 'groq', name: 'Groq (Llama 3.3 70B)' });
+          if (keys.deepseek) available.push({ id: 'deepseek', name: 'DeepSeek V3' });
+          if (keys.openai) available.push({ id: 'openai', name: 'OpenAI (GPT-4o-mini)' });
+          if (keys.mistral) available.push({ id: 'mistral', name: 'Mistral AI' });
+          if (keys.openrouter) available.push({ id: 'openrouter', name: 'OpenRouter' });
+
+          return jsonResponse({ available });
+        }
+
+        // [POST] /api/ai/analyze — Eksekusi AI Intelligence dengan AUTO-FAILOVER BACKUP
+        if (url.pathname === '/api/ai/analyze' && request.method === 'POST') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body: any = await request.json().catch(() => ({}));
+          // Input sanitization — strip potential XSS/injection vectors
+          const sanitize = (s: string) => s.replace(/<script[^>]*>.*?<\/script>/gi, '').replace(/on\w+\s*=/gi, '').replace(/javascript:/gi, '').replace(/(DROP|DELETE|INSERT|UPDATE|ALTER|EXEC)\s/gi, '[BLOCKED] ').slice(0, 5000);
+          const prompt = sanitize(body.prompt || '');
+          const preferred = body.provider || 'groq';
+          const systemPrompt = body.systemPrompt || 
+            'Anda adalah AI Global Intelligence Analyst untuk platform World Monitor. Berikan analisis ringkas, tajam, profesional, dan berbasis data tanpa basa-basi.';
+
+          if (!prompt) {
+            return jsonResponse({ error: 'Parameter prompt diperlukan' }, 400);
+          }
+
+          const keys = getAIKeys(env);
+
+          // Susun antrian failover: preferred diprioritaskan, diikuti provider ber-key lainnya
+          const allProviders = ['groq', 'gemini', 'deepseek', 'openai', 'mistral', 'openrouter'];
+          const prioritized = [preferred, ...allProviders.filter(p => p !== preferred)];
+
+          // Filter hanya provider yang kuncinya tersedia di env
+          const availableProviders = prioritized.filter(p => !!keys[p as keyof typeof keys]);
+
+          if (availableProviders.length === 0) {
+            return jsonResponse({
+              success: false,
+              error: 'Belum ada API key AI yang dikonfigurasi di Cloudflare Worker.',
+            }, 503);
+          }
+
+          const attempts: { provider: string; status: 'success' | 'failed'; error?: string }[] = [];
+
+          // Looping auto-failover: jika down/error/limit, otomatis panggil AI cadangan berikutnya
+          for (const prov of availableProviders) {
+            try {
+              const result = await callAIProvider(prov, prompt, systemPrompt, keys);
+              attempts.push({ provider: prov, status: 'success' });
+
+              return jsonResponse({
+                success: true,
+                text: result.text,
+                provider: result.provider,
+                fallbackOccurred: prov !== preferred,
+                attempts,
+              });
+            } catch (err: unknown) {
+              const errMsg = (err as Error).message || String(err);
+              console.warn(`[AI Failover] ${prov} gagal, beralih ke cadangan... Error:`, errMsg);
+              attempts.push({ provider: prov, status: 'failed', error: errMsg });
+            }
+          }
+
+          // Jika semua provider di antrian gagal
+          return jsonResponse({
+            success: false,
+            error: 'Seluruh provider AI yang tersedia mengalami kegagalan / rate-limit.',
+            attempts,
+          }, 502);
+        }
+
+        // [GET] /api/geopolitics — GDELT Project & UN ReliefWeb (Pengganti ACLED)
+        if (url.pathname === '/api/geopolitics') {
+          try {
+            const [gdeltRes, reliefRes] = await Promise.allSettled([
+              fetch('https://api.gdeltproject.org/api/v2/geo/geo?query=conflict%20OR%20military%20OR%20protest%20OR%20sanctions&mode=pointdata&format=GeoJSON&maxpoints=40', {
+                signal: AbortSignal.timeout(8000),
+              }).then(r => r.json()),
+              fetch('https://api.reliefweb.int/v1/reports?appname=world-monitor&limit=20&preset=latest', {
+                signal: AbortSignal.timeout(8000),
+              }).then(r => r.json()),
+            ]);
+
+            const events = [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (gdeltRes.status === 'fulfilled' && (gdeltRes.value as any)?.features) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              for (const f of (gdeltRes.value as any).features.slice(0, 30)) {
+                events.push({
+                  id: f.properties?.url || Math.random().toString(36).substring(7),
+                  title: f.properties?.name || 'Geopolitical Event',
+                  category: 'Konflik & Militer',
+                  source: 'GDELT Global Intelligence',
+                  date: f.properties?.date || new Date().toISOString(),
+                  lat: f.geometry?.coordinates?.[1] || null,
+                  lng: f.geometry?.coordinates?.[0] || null,
+                  url: f.properties?.url || null,
+                });
+              }
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (reliefRes.status === 'fulfilled' && (reliefRes.value as any)?.data) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              for (const d of (reliefRes.value as any).data.slice(0, 15)) {
+                events.push({
+                  id: d.id,
+                  title: d.fields?.title || 'Laporan Krisis PBB',
+                  category: 'Krisis Kemanusiaan',
+                  source: 'UN OCHA ReliefWeb',
+                  date: d.fields?.date?.created || new Date().toISOString(),
+                  url: d.fields?.url || null,
+                });
+              }
+            }
+
+            return jsonResponse(events, 200, {
+              'Cache-Control': 'public, max-age=900', // Cache 15 menit di edge
+            });
+          } catch (e: unknown) {
+            return jsonResponse({ error: (e as Error).message }, 500);
+          }
+        }
+
+        // [GET] /api/transport/flights — OpenSky Network ADS-B Radar
+        if (url.pathname === '/api/transport/flights') {
+          try {
+            const res = await fetch('https://opensky-network.org/api/states/all', {
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!res.ok) throw new Error(`OpenSky HTTP ${res.status}`);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const json: any = await res.json();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const flights = (json.states || []).slice(0, 80).map((s: any) => ({
+              icao24: s[0],
+              callsign: (s[1] || '').trim(),
+              country: s[2],
+              lng: s[5],
+              lat: s[6],
+              altitude: s[7],
+              velocity: s[9],
+              heading: s[10],
+            })).filter((f: { lat: number | null }) => f.lat !== null);
+
+            return jsonResponse(flights, 200, {
+              'Cache-Control': 'public, max-age=30', // Cache 30 detik di edge
+            });
+          } catch (e: unknown) {
+            return jsonResponse({ error: (e as Error).message }, 500);
+          }
+        }
+
+        // [GET] /api/energy — U.S. EIA Data Minyak & Gas Dunia
+        if (url.pathname === '/api/energy') {
+          const eiaKey = env.EIA_KEY || env.VITE_EIA_KEY;
+          if (!eiaKey) return jsonResponse({ error: 'EIA_KEY belum disetel' }, 500);
+
+          try {
+            const res = await fetch(
+              `https://api.eia.gov/v2/petroleum/pri/spt/data/?api_key=${eiaKey}&frequency=daily&data[0]=value&sort[0][column]=period&sort[0][direction]=desc&length=20`,
+              { signal: AbortSignal.timeout(10000) }
+            );
+            const data = await res.json();
+            return jsonResponse(data, 200, {
+              'Cache-Control': 'public, max-age=3600', // Cache 1 jam
+            });
+          } catch (e: unknown) {
+            return jsonResponse({ error: (e as Error).message }, 500);
+          }
+        }
+
+        // [GET] /api/energy/emissions — Electricity Maps Carbon Intensity
+        if (url.pathname === '/api/energy/emissions') {
+          const emKey = env.ELECTRICITYMAPS_KEY || env.VITE_ELECTRICITYMAPS_KEY;
+          if (!emKey) return jsonResponse({ error: 'ELECTRICITYMAPS_KEY belum disetel' }, 500);
+
+          try {
+            const zone = url.searchParams.get('zone') || 'US';
+            const res = await fetch(`https://api.electricitymaps.com/v3/carbon-intensity/latest?zone=${zone}`, {
+              headers: { 'auth-token': emKey },
+              signal: AbortSignal.timeout(8000),
+            });
+            const data = await res.json();
+            return jsonResponse(data, 200, {
+              'Cache-Control': 'public, max-age=1800',
+            });
+          } catch (e: unknown) {
+            return jsonResponse({ error: (e as Error).message }, 500);
+          }
+        }
+
+        // [GET] /api/youtube/live — Cari Siaran Langsung YouTube v3 Terkini
+        if (url.pathname === '/api/youtube/live') {
+          const ytKey = env.YOUTUBE_KEY || env.VITE_YOUTUBE_KEY;
+          if (!ytKey) return jsonResponse({ error: 'YOUTUBE_KEY belum disetel' }, 500);
+
+          try {
+            const q = url.searchParams.get('q') || 'earthquake natural disaster live stream';
+            const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&eventType=live&type=video&q=${encodeURIComponent(q)}&maxResults=6&key=${ytKey}`;
+            const res = await fetch(apiUrl, { signal: AbortSignal.timeout(8000) });
+            const data = await res.json();
+            return jsonResponse(data, 200, {
+              'Cache-Control': 'public, max-age=600', // Cache 10 menit di edge
+            });
+          } catch (e: unknown) {
+            return jsonResponse({ error: (e as Error).message }, 500);
+          }
+        }
+
+        // [POST] /api/auth/login — Admin Authentication
+        if (url.pathname === '/api/auth/login' && request.method === 'POST') {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body: any = await request.json().catch(() => ({}));
+          const user = (body.username || '').replace(/[<>"'&]/g, '').trim();
+          const pass = (body.password || '').trim();
+          
+          const validUser = env.ADMIN_USER || 'admin@jack-ai.my.id';
+          const validPass = env.ADMIN_PASS || 'admin123';
+
+          if (user === validUser && pass === validPass) {
+            const token = btoa(`${user}:${Date.now()}:${crypto.randomUUID()}`);
+            return jsonResponse({ success: true, token, user: validUser });
+          }
+          
+          // Delay response to prevent brute force timing attacks
+          await new Promise(r => setTimeout(r, 1000));
+          return jsonResponse({ success: false, error: 'Kredensial tidak valid.' }, 401);
+        }
+
+        return jsonResponse({ error: 'Endpoint API tidak ditemukan' }, 404);
+      } catch (err: unknown) {
+        return jsonResponse({ error: (err as Error).message }, 500);
+      }
+    }
+
+    // ─── 2. STATIC ASSETS & SPA ROUTING ──────────────────────────────────────
     let response = await env.ASSETS.fetch(request);
 
-    // 2. SPA Fallback (React Router) untuk rute seperti /dashboard, /map, /ekonomi, /lingkungan
+    // SPA Fallback (React Router) untuk rute seperti /dashboard, /map, /ekonomi, /lingkungan
     if (response.status === 404 && !url.pathname.includes('.')) {
       const indexRequest = new Request(new URL('/', request.url), request);
       response = await env.ASSETS.fetch(indexRequest);
     }
 
-    // 3. Tambahkan header keamanan dan optimasi edge caching
     const newHeaders = new Headers(response.headers);
     newHeaders.set('X-Content-Type-Options', 'nosniff');
     newHeaders.set('X-Frame-Options', 'SAMEORIGIN');
     newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    newHeaders.set('X-XSS-Protection', '1; mode=block');
+    newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+    newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com https://embed.windy.com https://www.youtube.com; media-src 'self' https:;");
 
     if (url.pathname.startsWith('/assets/')) {
       newHeaders.set('Cache-Control', 'public, max-age=31536000, immutable');

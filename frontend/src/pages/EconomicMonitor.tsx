@@ -98,13 +98,13 @@ export default function EconomicMonitor() {
   );
 
   return (
-    <div className="flex flex-col h-full bg-[#030712] text-white font-mono overflow-y-auto">
+    <div className="w-full min-h-full bg-[#030712] text-white font-mono flex flex-col">
       {/* ── HEADER ── */}
-      <div className="flex items-center justify-between px-6 py-4 bg-[#040d21] border-b border-cyan-900/40 sticky top-0 z-30 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-[#040d21] border-b border-cyan-900/40 sticky top-0 z-30 flex-shrink-0 gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff] flex-shrink-0" />
           <div>
-            <h1 className="text-sm font-bold tracking-widest text-white uppercase flex items-center gap-2">
+            <h1 className="text-xs sm:text-sm font-bold tracking-widest text-white uppercase flex flex-wrap items-center gap-2">
               <span>GLOBAL FINANCIAL & ECONOMIC INTELLIGENCE</span>
               <span className="text-[10px] text-emerald-400 border border-emerald-800/80 px-1.5 py-0.5 rounded bg-emerald-950/60 font-bold">
                 100% REAL-TIME FEED
@@ -116,8 +116,8 @@ export default function EconomicMonitor() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right">
+        <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          <div className="text-left sm:text-right">
             <div className="text-xs text-cyan-300 font-bold">
               {new Date().toLocaleTimeString('id-ID', { hour12: false })} WIB
             </div>
@@ -137,7 +137,7 @@ export default function EconomicMonitor() {
       </div>
 
       {/* ── CONTENT CONTAINER ── */}
-      <div className="p-6 space-y-6 flex-1">
+      <div className="p-3 sm:p-5 lg:p-6 space-y-6 flex-1">
         {/* ── TOP KPI CARDS ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* KPI 1: USD / IDR */}

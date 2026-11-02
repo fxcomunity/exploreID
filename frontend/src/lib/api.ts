@@ -1,16 +1,16 @@
 // src/lib/api.ts
 // Semua API call terpusat di sini — 100% LIVE DATA TANPA DATA FIKTIF
 
-const MAPTILER_KEY      = (import.meta.env.VITE_MAPTILER_KEY as string) || 'yOkVtwcO1iYENTiJvyrd';
-const EXCHANGE_KEY      = (import.meta.env.VITE_EXCHANGERATE_KEY as string) || '87f19f9d738f50e5fa80514b';
-const ALPHAVANTAGE_KEY  = (import.meta.env.VITE_ALPHAVANTAGE_KEY as string) || 'Z7Y5XPTQKUY8GZ2I';
+const MAPTILER_KEY      = (import.meta.env.VITE_MAPTILER_KEY as string) || '';
+const EXCHANGE_KEY      = (import.meta.env.VITE_EXCHANGERATE_KEY as string) || '';
+const ALPHAVANTAGE_KEY  = (import.meta.env.VITE_ALPHAVANTAGE_KEY as string) || '';
 
 export const MAP_STYLE = `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY}`;
 
 // ─── Gempa Bumi (USGS — LIVE) ────────────────────────────────────────────────
 export async function fetchEarthquakes() {
   const res = await fetch(
-    'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson'
+    'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson'
   );
   const json = await res.json();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,7 +29,7 @@ export async function fetchEarthquakes() {
 // ─── Bencana Global (NASA EONET — LIVE) ──────────────────────────────────────
 export async function fetchDisasters() {
   const res = await fetch(
-    'https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=40'
+    'https://eonet.gsfc.nasa.gov/api/v3/events?status=all&limit=60'
   );
   const json = await res.json();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,24 +61,49 @@ export async function fetchAirQualityLive(lat: number, lng: number) {
   return json.current;
 }
 
-// ─── Nilai Tukar Valas Real-Time (ExchangeRate API — LIVE) ───────────────────
+// ─── Nilai Tukar Valas Real-Time (ExchangeRate API — Cloudflare Edge Proxy) ───
 export async function fetchExchangeRates(base = 'USD') {
-  const res = await fetch(
-    `https://v6.exchangerate-api.com/v6/${EXCHANGE_KEY}/latest/${base}`
-  );
-  return res.json();
+  try {
+    const res = await fetch(`/api/forex?base=${base}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (!data.error) return data;
+    }
+  } catch {
+    // Fallback jika mode dev lokal dengan direct key
+  }
+  if (EXCHANGE_KEY) {
+    const res = await fetch(
+      `https://v6.exchangerate-api.com/v6/${EXCHANGE_KEY}/latest/${base}`
+    );
+    return res.json();
+  }
+  return { result: 'error', conversion_rates: {} };
 }
 
 // ─── Saham & Kuotasi Forex (Alpha Vantage — LIVE) ────────────────────────────
 export async function fetchStockPrice(ticker: string) {
+  if (!ALPHAVANTAGE_KEY) return null;
   const res = await fetch(
     `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${ALPHAVANTAGE_KEY}`
   );
   return res.json();
 }
 
-// ─── Komoditas Pasar Real-Time (Alpha Vantage — LIVE) ────────────────────────
+// ─── Komoditas Pasar Real-Time (Alpha Vantage — Cloudflare Edge Proxy) ───────
 export async function fetchLiveCommodities() {
+  try {
+    const res = await fetch('/api/commodities');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {
+    // Fallback jika mode dev lokal dengan direct key
+  }
+
+  if (!ALPHAVANTAGE_KEY) return [];
+
   try {
     const [wtiRes, gasRes, copperRes] = await Promise.allSettled([
       fetch(`https://www.alphavantage.co/query?function=WTI&interval=monthly&apikey=${ALPHAVANTAGE_KEY}`).then(r => r.json()),
@@ -123,6 +148,148 @@ export async function fetchLiveCommodities() {
     return results;
   } catch (err) {
     console.error('Error fetching commodities:', err);
+    return [];
+  }
+}
+
+// ─── AI Intelligence Multi-Provider (Cloudflare Worker Proxy) ────────────────
+export interface AIAnalysisResult {
+  success: boolean;
+  text?: string;
+  provider?: string;
+  fallbackOccurred?: boolean;
+  attempts?: { provider: string; status: 'success' | 'failed'; error?: string }[];
+  error?: string;
+}
+
+export async function runAIAnalysis(prompt: string, preferredProvider?: string): Promise<AIAnalysisResult> {
+  const systemPrompt = 'Anda adalah AI Global Intelligence Analyst untuk platform World Monitor. Berikan analisis ringkas, tajam, profesional, dan berbasis data tanpa basa-basi.';
+
+  // 1. Coba panggil via Edge API Gateway Cloudflare
+  try {
+    const res = await fetch('/api/ai/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, provider: preferredProvider, systemPrompt }),
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data.success && data.text) return data;
+    }
+  } catch (e) {
+    // Lanjut ke fallback client-side langsung di bawah
+  }
+
+  // 2. Fallback Langsung di Browser (Jika mode dev lokal atau Worker belum dideploy)
+  const groqKey = import.meta.env.VITE_GROQ_KEY as string;
+  const geminiKey = import.meta.env.VITE_GEMINI_KEY as string;
+  const deepseekKey = import.meta.env.VITE_DEEPSEEK_KEY as string;
+  const openaiKey = import.meta.env.VITE_OPENAI_KEY as string;
+  const mistralKey = import.meta.env.VITE_MISTRAL_KEY as string;
+  const openrouterKey = import.meta.env.VITE_OPENROUTER_KEY as string;
+
+  // Coba Groq Llama 3.3 (Super cepat & andal)
+  if (groqKey) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
+          temperature: 0.5,
+          max_tokens: 1500,
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const text = d.choices?.[0]?.message?.content;
+        if (text) return { success: true, text, provider: 'Groq (Llama 3.3 70B)' };
+      }
+    } catch {
+      // lanjut ke gemini
+    }
+  }
+
+  // Coba Google Gemini 2.0 Flash
+  if (geminiKey) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const text = d.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return { success: true, text, provider: 'Google Gemini (2.0 Flash)' };
+      }
+    } catch {
+      // lanjut ke deepseek
+    }
+  }
+
+  // Coba DeepSeek V3
+  if (deepseekKey) {
+    try {
+      const res = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deepseekKey}` },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const text = d.choices?.[0]?.message?.content;
+        if (text) return { success: true, text, provider: 'DeepSeek V3' };
+      }
+    } catch {
+      // lanjut ke openai
+    }
+  }
+
+  // Coba OpenAI GPT-4o-mini
+  if (openaiKey) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const text = d.choices?.[0]?.message?.content;
+        if (text) return { success: true, text, provider: 'OpenAI GPT-4o-mini' };
+      }
+    } catch {
+      // failover habis
+    }
+  }
+
+  return {
+    success: false,
+    error: 'Semua AI provider mengalami kendala atau kuota habis. Silakan periksa koneksi atau coba sesaat lagi.',
+  };
+}
+
+export async function fetchAvailableAIProviders(): Promise<{ id: string; name: string }[]> {
+  try {
+    const res = await fetch('/api/ai/providers');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.available || [];
+  } catch {
     return [];
   }
 }
@@ -258,3 +425,153 @@ export function severityColor(magnitude: number | null): string {
   if (magnitude >= 5) return 'text-orange-400';
   return 'text-yellow-400';
 }
+
+// ─── Geopolitik & Konflik Global (GDELT Project & UN ReliefWeb) ─────────────
+export interface GeopoliticalEvent {
+  id: string;
+  title: string;
+  category: string;
+  source: string;
+  date: string;
+  lat?: number | null;
+  lng?: number | null;
+  url?: string | null;
+}
+
+export async function fetchGeopoliticalEvents(): Promise<GeopoliticalEvent[]> {
+  try {
+    const res = await fetch('/api/geopolitics');
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to load geopolitical events:', err);
+    return [];
+  }
+}
+
+// ─── Transportasi Udara (OpenSky ADS-B Radar) ────────────────────────────────
+export interface LiveFlight {
+  icao24: string;
+  callsign: string;
+  country: string;
+  lng: number;
+  lat: number;
+  altitude: number;
+  velocity: number;
+  heading: number;
+}
+
+export async function fetchLiveFlights(): Promise<LiveFlight[]> {
+  try {
+    const res = await fetch('/api/transport/flights');
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to load live flights:', err);
+    return [];
+  }
+}
+
+// ─── Energi Global (U.S. EIA Data) ───────────────────────────────────────────
+export async function fetchEnergyData() {
+  try {
+    const res = await fetch('/api/energy');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to load energy data:', err);
+    return null;
+  }
+}
+
+// ─── Emisi Karbon Listrik (Electricity Maps) ─────────────────────────────────
+export async function fetchCarbonEmissions(zone = 'US') {
+  try {
+    const res = await fetch(`/api/energy/emissions?zone=${zone}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to load carbon emissions:', err);
+    return null;
+  }
+}
+
+// ─── YouTube Data API v3 Live Search ─────────────────────────────────────────
+export interface YouTubeLiveItem {
+  id: string;
+  title: string;
+  channel: string;
+  thumbnail: string;
+  publishedAt: string;
+}
+
+export async function fetchYouTubeLiveDisasters(query = 'earthquake natural disaster live stream'): Promise<YouTubeLiveItem[]> {
+  try {
+    const res = await fetch(`/api/youtube/live?q=${encodeURIComponent(query)}`);
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data.items) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return data.items.map((item: any) => ({
+          id: item.id?.videoId,
+          title: item.snippet?.title || 'Live Broadcast',
+          channel: item.snippet?.channelTitle || 'YouTube Live',
+          thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url,
+          publishedAt: item.snippet?.publishedAt,
+        })).filter((item: { id: string }) => !!item.id);
+      }
+    }
+  } catch {
+    // fallback client-side
+  }
+
+  const ytKey = (import.meta.env.VITE_YOUTUBE_KEY as string) || 'AIzaSyAUpjD_u3txwJbUlXg3yLEQb_9gI5EmFrQ';
+  if (ytKey) {
+    try {
+      const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&eventType=live&type=video&q=${encodeURIComponent(query)}&maxResults=10&key=${ytKey}`;
+      const res = await fetch(apiUrl);
+      const data = await res.json();
+      if (data.items) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return data.items.map((item: any) => ({
+          id: item.id?.videoId,
+          title: item.snippet?.title || 'Live Broadcast',
+          channel: item.snippet?.channelTitle || 'YouTube Live',
+          thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url,
+          publishedAt: item.snippet?.publishedAt,
+        })).filter((item: { id: string }) => !!item.id);
+      }
+    } catch (e) {
+      console.error('Failed to fetch YouTube Live directly:', e);
+    }
+  }
+
+  return [];
+}
+
+// ─── Berita Bencana & Krisis Terkini (YouTube Data API v3 Video Reports) ──────
+export async function fetchYouTubeDisasterNews(query = 'natural disaster earthquake volcano eruption breaking news'): Promise<YouTubeLiveItem[]> {
+  const ytKey = (import.meta.env.VITE_YOUTUBE_KEY as string) || 'AIzaSyAUpjD_u3txwJbUlXg3yLEQb_9gI5EmFrQ';
+  if (ytKey) {
+    try {
+      const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&order=date&q=${encodeURIComponent(query)}&maxResults=10&key=${ytKey}`;
+      const res = await fetch(apiUrl);
+      const data = await res.json();
+      if (data.items) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return data.items.map((item: any) => ({
+          id: item.id?.videoId,
+          title: item.snippet?.title || 'Disaster Report',
+          channel: item.snippet?.channelTitle || 'News Wire',
+          thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url,
+          publishedAt: item.snippet?.publishedAt,
+        })).filter((item: { id: string }) => !!item.id);
+      }
+    } catch (e) {
+      console.error('Failed to fetch YouTube Disaster News:', e);
+    }
+  }
+  return [];
+}
+

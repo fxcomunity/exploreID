@@ -18,9 +18,9 @@ export default function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0F24] text-white overflow-y-auto font-mono">
+    <div className="w-full min-h-full bg-[#0A0F24] text-white font-mono">
       {/* Hero */}
-      <div className="relative px-10 pt-16 pb-10 border-b border-cyan-900/40 overflow-hidden">
+      <div className="relative px-4 sm:px-10 pt-8 sm:pt-14 pb-8 sm:pb-10 border-b border-cyan-900/40 overflow-hidden">
         {/* Background glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[200px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -33,20 +33,20 @@ export default function Landing() {
             <img
               src="/logo.png"
               alt="World Monitor — Real-Time Global Insights"
-              className="h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_20px_rgba(0,229,255,0.3)]"
+              className="h-12 sm:h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_20px_rgba(0,229,255,0.3)]"
             />
           </div>
-          <p className="text-gray-400 text-sm max-w-xl leading-relaxed mb-6">
+          <p className="text-gray-400 text-xs sm:text-sm max-w-xl leading-relaxed mb-6">
             Platform pemantauan kondisi global — mengumpulkan, menganalisis, dan memvisualisasikan
             informasi dari seluruh penjuru dunia secara real-time.
           </p>
           <div className="flex gap-3 flex-wrap">
             <button onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition">
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition">
               Buka Dashboard <ArrowRight className="w-3 h-3" />
             </button>
             <button onClick={() => navigate('/map')}
-              className="flex items-center gap-2 px-5 py-2 border border-cyan-800 hover:border-cyan-600 text-cyan-400 text-xs font-bold rounded-lg transition">
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 border border-cyan-800 hover:border-cyan-600 text-cyan-400 text-xs font-bold rounded-lg transition">
               Live World Map <Globe className="w-3 h-3" />
             </button>
           </div>
@@ -54,31 +54,31 @@ export default function Landing() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4 px-10 py-6 border-b border-cyan-900/30">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-4 sm:px-10 py-6 border-b border-cyan-900/30">
         {[
           { label: 'Negara Dipantau', value: '195', color: 'text-cyan-400' },
           { label: 'Sumber Data Aktif', value: '12', color: 'text-green-400' },
           { label: 'Pembaruan/Jam', value: '3.600+', color: 'text-yellow-400' },
           { label: 'Event Dipantau', value: '50+', color: 'text-red-400' },
         ].map((s, i) => (
-          <div key={i} className="text-center">
-            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-gray-500 text-xs mt-1">{s.label}</div>
+          <div key={i} className="text-center p-2 rounded bg-black/20 border border-cyan-950 sm:border-0 sm:bg-transparent">
+            <div className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</div>
+            <div className="text-gray-500 text-[11px] sm:text-xs mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Module Grid */}
-      <div className="px-10 py-8">
+      <div className="px-4 sm:px-10 py-8">
         <h2 className="text-xs font-bold text-gray-500 tracking-widest mb-4">MODUL TERSEDIA</h2>
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {modules.map((m, i) => {
             const Icon = m.icon;
             return (
               <button
                 key={i}
                 onClick={() => navigate(m.path)}
-                className={`flex items-start gap-3 p-4 bg-[#0D1530] border rounded-lg text-left transition group ${m.color}`}
+                className={`flex items-start gap-3 p-3.5 sm:p-4 bg-[#0D1530] border rounded-lg text-left transition group ${m.color}`}
               >
                 <div className="mt-0.5 flex-shrink-0">
                   <Icon className="w-5 h-5" />
@@ -95,7 +95,7 @@ export default function Landing() {
       </div>
 
       {/* Data sources */}
-      <div className="px-10 pb-8">
+      <div className="px-4 sm:px-10 pb-8">
         <h2 className="text-xs font-bold text-gray-500 tracking-widest mb-4">SUMBER DATA TERINTEGRASI</h2>
         <div className="flex flex-wrap gap-2">
           {[
@@ -122,7 +122,7 @@ export default function Landing() {
       </div>
 
       {/* Footer */}
-      <div className="px-10 py-4 border-t border-cyan-900/30 text-gray-700 text-xs flex items-center justify-between">
+      <div className="px-4 sm:px-10 py-4 border-t border-cyan-900/30 text-gray-700 text-xs flex flex-col sm:flex-row items-center justify-between gap-2">
         <span>© 2026 World Monitor · Data dari sumber terbuka & API resmi</span>
         <span className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
