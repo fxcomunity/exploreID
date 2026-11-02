@@ -478,8 +478,8 @@ export default {
 
           const sanitizeText = (s: string) => s.replace(/<[^>]*>?/gm, '').trim();
           const comment = sanitizeText(String(body.comment || '')).slice(0, 500);
-          const customName = sanitizeText(String(body.authorName || '')).slice(0, 40);
-          const authorName = customName || `Anonim ${identity.id}`;
+          // Nama penampil dikunci mutlak dari sistem (user tidak bisa mengganti)
+          const authorName = `Anonim ${identity.id}`;
 
           // Cek jika ID perangkat ini sudah pernah submit ulasan
           const existingIndex = GLOBAL_FEEDBACKS.findIndex(f => f.deviceId === identity.id);

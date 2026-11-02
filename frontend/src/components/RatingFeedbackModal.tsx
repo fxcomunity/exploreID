@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, MessageSquare, ThumbsUp, Smartphone, Monitor, X, Check, Heart, ShieldCheck, Sparkles } from 'lucide-react';
+import { Star, MessageSquare, ThumbsUp, Smartphone, Monitor, X, Check, Heart, ShieldCheck, Sparkles, Lock } from 'lucide-react';
 
 export interface FeedbackItem {
   id: string;
@@ -319,31 +319,36 @@ export default function RatingFeedbackModal({
               {/* Label Bintang Terpilih */}
               <div className="text-center pt-1">
                 <span className={`text-xs font-bold ${ratingInfo.color}`}>
-                  {currentDisplayRating} Bintang — {ratingInfo.label}
+                  {currentDisplayRating} Bintang: {ratingInfo.label}
                 </span>
                 <p className="text-[10px] text-gray-500">{ratingInfo.desc}</p>
               </div>
             </div>
 
-            {/* Nama Pengirim (Anonim atau Kustom) */}
-            <div className="space-y-1">
+            {/* Nama Penampil (DIKUNCI OLEH SISTEM) */}
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] text-gray-400 uppercase">Nama Penampil:</label>
-                <button
-                  type="button"
-                  onClick={() => setAuthorName(`Anonim ${deviceId}`)}
-                  className="text-[10px] text-cyan-400 hover:underline"
-                >
-                  Pakai Nama Anonim ({`Anonim ${deviceId}`})
-                </button>
+                <label className="text-[11px] text-gray-400 uppercase font-mono">Nama Penampil:</label>
+                <span className="text-[10px] text-amber-400 font-mono flex items-center gap-1 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/60">
+                  <Lock className="w-3 h-3" />
+                  ID Dikunci Sistem
+                </span>
               </div>
-              <input
-                type="text"
-                value={authorName}
-                onChange={e => setAuthorName(e.target.value)}
-                placeholder={`Anonim ${deviceId}`}
-                className="w-full px-3 py-2 rounded-lg bg-black/60 border border-cyan-900/50 text-xs text-cyan-300 focus:outline-none focus:border-cyan-400 font-mono"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={`Anonim ${deviceId}`}
+                  className="w-full px-3 py-2.5 rounded-lg bg-black/70 border border-cyan-900/60 text-xs text-cyan-300 font-bold font-mono cursor-not-allowed select-none"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                  Terkunci
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 font-mono">
+                ID unik dibuat otomatis oleh sistem dan terkunci permanen untuk perangkat ini.
+              </p>
             </div>
 
             {/* Textarea Komentar / Ulasan */}
