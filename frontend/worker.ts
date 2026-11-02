@@ -268,11 +268,19 @@ let GLOBAL_MAINTENANCE: {
   title: string;
   message: string;
   endTime: number;
+  contactEmail?: string;
+  whatsappNumber?: string;
+  logoType?: string; // 'WRENCH' | 'SHIELD' | 'ALERT' | 'SERVER'
+  backgroundStyle?: string; // 'CYBER_DARK' | 'MIDNIGHT_BLUE' | 'NEON_PURPLE' | 'CRIMSON_RED' | 'DEEP_EMERALD'
 } = {
   active: false,
   title: 'Lagi Maintenance',
   message: 'Kami lagi upgrade sistem biar makin kenceng & aman. Bentar lagi balik kok.',
   endTime: Date.now() + 2 * 60 * 60 * 1000,
+  contactEmail: 'admin@jack-ai.my.id',
+  whatsappNumber: '+62 812-3456-7890',
+  logoType: 'SHIELD',
+  backgroundStyle: 'CYBER_DARK',
 };
 
 export default {
@@ -309,6 +317,10 @@ export default {
           if (body.title) GLOBAL_MAINTENANCE.title = String(body.title).slice(0, 100);
           if (body.message) GLOBAL_MAINTENANCE.message = String(body.message).slice(0, 500);
           if (body.endTime) GLOBAL_MAINTENANCE.endTime = Number(body.endTime);
+          if (body.contactEmail) GLOBAL_MAINTENANCE.contactEmail = String(body.contactEmail);
+          if (body.whatsappNumber !== undefined) GLOBAL_MAINTENANCE.whatsappNumber = String(body.whatsappNumber);
+          if (body.logoType) GLOBAL_MAINTENANCE.logoType = String(body.logoType);
+          if (body.backgroundStyle) GLOBAL_MAINTENANCE.backgroundStyle = String(body.backgroundStyle);
 
           return jsonResponse({
             success: true,

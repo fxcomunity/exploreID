@@ -27,6 +27,10 @@ export default function AdminDashboard() {
   const [maintenanceDurationHours, setMaintenanceDurationHours] = useState('2');
   const [maintenanceTheme, setMaintenanceTheme] = useState(() => localStorage.getItem('wm_maintenance_theme') || 'CYBER_DARK');
   const [maintenanceContact, setMaintenanceContact] = useState(() => localStorage.getItem('wm_maintenance_contact') || 'admin@jack-ai.my.id');
+  const [maintenanceWhatsapp, setMaintenanceWhatsapp] = useState(() => localStorage.getItem('wm_maintenance_wa') || '+62 812-3456-7890');
+  const [maintenanceLogoType, setMaintenanceLogoType] = useState(() => localStorage.getItem('wm_maintenance_logo') || 'SHIELD');
+  const [maintenanceBgColor, setMaintenanceBgColor] = useState(() => localStorage.getItem('wm_maintenance_bg') || '#030816');
+  const [maintenanceGlowColor, setMaintenanceGlowColor] = useState(() => localStorage.getItem('wm_maintenance_glow') || '#00e5ff');
   const [maintenanceSaveMsg, setMaintenanceSaveMsg] = useState('');
 
   const [ddosThreshold, setDdosThreshold] = useState('100 req/min');
@@ -89,6 +93,10 @@ export default function AdminDashboard() {
     localStorage.setItem('wm_maintenance_msg', maintenanceMessage);
     localStorage.setItem('wm_maintenance_theme', maintenanceTheme);
     localStorage.setItem('wm_maintenance_contact', maintenanceContact);
+    localStorage.setItem('wm_maintenance_wa', maintenanceWhatsapp);
+    localStorage.setItem('wm_maintenance_logo', maintenanceLogoType);
+    localStorage.setItem('wm_maintenance_bg', maintenanceBgColor);
+    localStorage.setItem('wm_maintenance_glow', maintenanceGlowColor);
     localStorage.setItem('wm_maintenance_end', String(targetEnd));
 
     // Broadcast ke server Cloudflare Worker
@@ -101,13 +109,17 @@ export default function AdminDashboard() {
           title: maintenanceTitle,
           message: maintenanceMessage,
           endTime: targetEnd,
+          contactEmail: maintenanceContact,
+          whatsappNumber: maintenanceWhatsapp,
+          logoType: maintenanceLogoType,
+          backgroundStyle: maintenanceBgColor,
         }),
       });
     } catch {
       // Local fallback
     }
 
-    setMaintenanceSaveMsg('Pengaturan & tampilan halaman maintenance berhasil disimpan!');
+    setMaintenanceSaveMsg('Pengaturan, logo, warna background & kontak WhatsApp berhasil disimpan!');
     setTimeout(() => setMaintenanceSaveMsg(''), 4000);
   };
 
@@ -378,25 +390,9 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] text-gray-400 uppercase">Durasi Estimasi Countdown:</label>
-                    <select
-                      value={maintenanceDurationHours}
-                      onChange={e => setMaintenanceDurationHours(e.target.value)}
-                      className="w-full bg-black/50 border border-cyan-900/50 rounded-lg px-3 py-2 text-xs text-cyan-300 focus:outline-none"
-                    >
-                      <option value="0.5">30 Menit</option>
-                      <option value="1">1 Jam</option>
-                      <option value="2">2 Jam</option>
-                      <option value="4">4 Jam</option>
-                      <option value="8">8 Jam</option>
-                      <option value="24">24 Jam</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] text-gray-400 uppercase">Email Kontak Dukungan:</label>
+                    <label className="text-[11px] text-gray-400 uppercase">Email Kontak:</label>
                     <input
                       type="text"
                       value={maintenanceContact}
@@ -404,12 +400,81 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 rounded-lg bg-black/50 border border-cyan-900/50 text-xs text-gray-300 focus:outline-none focus:border-cyan-400"
                     />
                   </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-gray-400 uppercase">Nomor WhatsApp Dukungan:</label>
+                    <input
+                      type="text"
+                      value={maintenanceWhatsapp}
+                      onChange={e => setMaintenanceWhatsapp(e.target.value)}
+                      placeholder="+62 812-xxxx-xxxx"
+                      className="w-full px-3 py-2 rounded-lg bg-black/50 border border-cyan-900/50 text-xs text-emerald-400 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Pilih Logo / Ikon Maintenance */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] text-gray-400 uppercase">Pilih Logo / Ikon Di Atas Judul:</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: 'SHIELD', label: 'Perisai Biru', desc: 'Official Shield' },
+                      { id: 'WRENCH', label: 'Kunci Pas', desc: 'Repair Pulse' },
+                      { id: 'ALERT', label: 'Segitiga Awas', desc: 'Warning Alert' },
+                      { id: 'SERVER', label: 'Server Edge', desc: 'System Core' },
+                    ].map(lg => (
+                      <button
+                        key={lg.id}
+                        type="button"
+                        onClick={() => setMaintenanceLogoType(lg.id)}
+                        className={`p-2 rounded-lg border text-center transition ${
+                          maintenanceLogoType === lg.id
+                            ? 'bg-cyan-950/80 border-cyan-400 shadow-md shadow-cyan-950 text-white'
+                            : 'bg-black/40 border-cyan-900/40 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{lg.label}</div>
+                        <div className="text-[9px] text-gray-500">{lg.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pilih Warna Tema Background */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] text-gray-400 uppercase">Pilih Tema Warna Background:</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {[
+                      { name: 'Cyber Dark', bg: '#030816', glow: '#00e5ff' },
+                      { name: 'Deep Navy', bg: '#060e24', glow: '#3b82f6' },
+                      { name: 'Midnight Purple', bg: '#0d0720', glow: '#a855f7' },
+                      { name: 'Obsidian Red', bg: '#180407', glow: '#ef4444' },
+                      { name: 'Dark Emerald', bg: '#03140e', glow: '#10b981' },
+                    ].map(theme => (
+                      <button
+                        key={theme.name}
+                        type="button"
+                        onClick={() => {
+                          setMaintenanceBgColor(theme.bg);
+                          setMaintenanceGlowColor(theme.glow);
+                        }}
+                        className={`p-2 rounded-lg border text-center transition flex flex-col items-center gap-1 ${
+                          maintenanceBgColor === theme.bg
+                            ? 'border-cyan-400 shadow-md bg-white/10'
+                            : 'border-cyan-900/40 bg-black/40 hover:border-gray-500'
+                        }`}
+                      >
+                        <span className="w-4 h-4 rounded-full border border-white/30" style={{ backgroundColor: theme.glow }} />
+                        <span className="text-[10px] text-gray-300 font-bold leading-tight">{theme.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleSaveMaintenanceSettings()}
-                  className="w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs tracking-wide transition flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs tracking-wide transition flex items-center justify-center gap-2 mt-2 shadow-lg shadow-cyan-950/50"
                 >
                   <Save className="w-4 h-4" />
                   <span>Simpan Perubahan Tampilan Maintenance</span>
@@ -435,10 +500,21 @@ export default function AdminDashboard() {
                   </a>
                 </div>
 
-                {/* Preview Box Miniatur */}
-                <div className="rounded-xl border border-cyan-900/60 bg-[#030816] p-6 text-center space-y-4 shadow-inner">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-                    <Wrench className="w-6 h-6 animate-pulse" />
+                {/* Preview Box Miniatur Dinamis */}
+                <div
+                  className="rounded-xl border border-cyan-900/60 p-6 text-center space-y-4 shadow-inner transition-colors duration-300"
+                  style={{ backgroundColor: maintenanceBgColor }}
+                >
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30">
+                    {maintenanceLogoType === 'SHIELD' ? (
+                      <img src="/admin-shield-logo.png" alt="Shield Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(0,229,255,0.7)]" />
+                    ) : maintenanceLogoType === 'ALERT' ? (
+                      <Shield className="w-8 h-8 text-amber-400 animate-pulse" />
+                    ) : maintenanceLogoType === 'SERVER' ? (
+                      <Server className="w-8 h-8 text-cyan-400" />
+                    ) : (
+                      <Wrench className="w-8 h-8 text-cyan-400 animate-pulse" />
+                    )}
                   </div>
                   <div>
                     <div className="text-lg font-bold text-white">{maintenanceTitle}</div>
@@ -454,8 +530,11 @@ export default function AdminDashboard() {
                     ))}
                   </div>
 
-                  <div className="pt-2 text-[10px] text-gray-500">
-                    Kontak: {maintenanceContact}
+                  <div className="pt-2 flex flex-col items-center gap-1 text-[10px] text-gray-400">
+                    <div>Email: <span className="text-cyan-300">{maintenanceContact}</span></div>
+                    {maintenanceWhatsapp && (
+                      <div className="text-emerald-400 font-bold">WhatsApp: {maintenanceWhatsapp}</div>
+                    )}
                   </div>
                 </div>
               </div>

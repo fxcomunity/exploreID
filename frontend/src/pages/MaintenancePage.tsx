@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Wrench, Clock, RefreshCw, Mail, ShieldAlert, Lock } from 'lucide-react';
+import { Wrench, Clock, RefreshCw, Mail, ShieldAlert, Lock, Server, MessageCircle } from 'lucide-react';
 import { isAdminAuthenticated } from '../lib/auth';
 
-const HEALTH_URL = '/api/config'; // endpoint stabil untuk cek kesehatan server
 const CHECK_EVERY_MS = 15_000;
 const CONTACT_EMAIL = 'admin@jack-ai.my.id';
 
@@ -15,6 +14,11 @@ export default function MaintenancePage() {
   });
   const [customTitle, setCustomTitle] = useState(() => localStorage.getItem('wm_maintenance_title') || 'Lagi Maintenance');
   const [customMessage, setCustomMessage] = useState(() => localStorage.getItem('wm_maintenance_msg') || 'Kami lagi upgrade sistem telemetri & keamanan biar makin kenceng dan stabil. Bentar lagi balik kok!');
+  const [contactEmail, setContactEmail] = useState(() => localStorage.getItem('wm_maintenance_contact') || CONTACT_EMAIL);
+  const [whatsappNumber, setWhatsappNumber] = useState(() => localStorage.getItem('wm_maintenance_wa') || '+62 812-3456-7890');
+  const [logoType, setLogoType] = useState(() => localStorage.getItem('wm_maintenance_logo') || 'SHIELD');
+  const [bgColor, setBgColor] = useState(() => localStorage.getItem('wm_maintenance_bg') || '#030816');
+  const [glowColor, setGlowColor] = useState(() => localStorage.getItem('wm_maintenance_glow') || '#00e5ff');
 
   const [left, setLeft] = useState(Math.max(0, targetEnd - Date.now()));
   const [checking, setChecking] = useState(false);
@@ -49,6 +53,17 @@ export default function MaintenancePage() {
         if (data.title) setCustomTitle(data.title);
         if (data.message) setCustomMessage(data.message);
         if (data.endTime) setTargetEnd(data.endTime);
+        if (data.contactEmail) setContactEmail(data.contactEmail);
+        if (data.whatsappNumber) setWhatsappNumber(data.whatsappNumber);
+        if (data.logoType) setLogoType(data.logoType);
+        if (data.backgroundStyle) {
+          setBgColor(data.backgroundStyle);
+          if (data.backgroundStyle.includes('#061426')) setGlowColor('#0284c7');
+          else if (data.backgroundStyle.includes('#160628')) setGlowColor('#a855f7');
+          else if (data.backgroundStyle.includes('#240608')) setGlowColor('#ef4444');
+          else if (data.backgroundStyle.includes('#022416')) setGlowColor('#10b981');
+          else setGlowColor('#00e5ff');
+        }
 
         if (isManualClick) {
           setCheckStatusMsg('⏳ Server masih dalam proses perbaikan/pemeliharaan. Harap tunggu sesuai hitungan mundur di atas.');
@@ -84,7 +99,10 @@ export default function MaintenancePage() {
   const s = Math.floor((left % 60_000) / 1000);
 
   return (
-    <div className="min-h-screen w-full bg-[#030816] flex items-center justify-center p-4 relative overflow-hidden font-mono select-none">
+    <div
+      className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden font-mono select-none transition-colors duration-500"
+      style={{ backgroundColor: bgColor }}
+    >
       {/* Background Cyber Grid */}
       <div
         className="absolute inset-0 opacity-[0.04]"
@@ -95,7 +113,10 @@ export default function MaintenancePage() {
         }}
       />
       {/* Ambient Glows */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-[130px] pointer-events-none" />
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[130px] pointer-events-none opacity-20 transition-all duration-500"
+        style={{ backgroundColor: glowColor }}
+      />
       <div className="absolute top-1/4 left-1/3 w-[300px] h-[300px] rounded-full bg-blue-600/10 blur-[100px] pointer-events-none" />
 
       {/* Admin Bypass Pill (Hanya muncul jika admin sedang login) */}
@@ -112,9 +133,21 @@ export default function MaintenancePage() {
       )}
 
       <div className="relative z-10 w-full max-w-lg text-center px-2">
-        {/* Animated Wrench Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 mb-6 shadow-2xl shadow-cyan-950/60 ring-1 ring-cyan-500/20">
-          <Wrench className="w-10 h-10 text-cyan-400 animate-pulse" />
+        {/* Dynamic Logo Icon */}
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-black/40 border border-cyan-500/30 mb-6 shadow-2xl shadow-cyan-950/60 ring-1 ring-cyan-500/20 backdrop-blur-md">
+          {logoType === 'SHIELD' ? (
+            <img
+              src="/admin-shield-logo.png"
+              alt="Shield Logo"
+              className="w-12 h-12 object-contain drop-shadow-[0_0_12px_rgba(0,229,255,0.7)]"
+            />
+          ) : logoType === 'ALERT' ? (
+            <ShieldAlert className="w-10 h-10 text-amber-400 animate-pulse" />
+          ) : logoType === 'SERVER' ? (
+            <Server className="w-10 h-10 text-cyan-400" />
+          ) : (
+            <Wrench className="w-10 h-10 text-cyan-400 animate-pulse" />
+          )}
         </div>
 
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -159,7 +192,7 @@ export default function MaintenancePage() {
           <button
             onClick={() => check(true)}
             disabled={checking}
-            className="mt-6 w-full py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm tracking-wide transition shadow-lg shadow-cyan-950/60 flex items-center justify-center gap-2"
+            className="mt-6 w-full py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm tracking-wide transition shadow-lg shadow-cyan-950/60 flex items-center justify-center gap-2 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             <span>{checking ? 'Memeriksa status...' : 'Cek Status Sekarang'}</span>
@@ -167,7 +200,7 @@ export default function MaintenancePage() {
 
           {/* Status Alert Pemberitahuan Saat Belum Selesai Perbaikan */}
           {checkStatusMsg && (
-            <div className="mt-3 p-2.5 rounded-xl bg-amber-950/60 border border-amber-600/50 text-amber-300 text-xs text-center font-mono animate-fadeIn">
+            <div className="mt-3 p-2.5 rounded-xl bg-amber-950/60 border border-amber-600/50 text-amber-300 text-xs text-center font-mono">
               {checkStatusMsg}
             </div>
           )}
@@ -177,18 +210,31 @@ export default function MaintenancePage() {
           </p>
         </div>
 
-        {/* Footer Contact */}
-        <div className="mt-6 flex flex-col items-center gap-1.5">
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="inline-flex items-center gap-2 text-xs font-mono text-gray-400 hover:text-cyan-300 transition"
-          >
-            <Mail className="w-3.5 h-3.5 text-cyan-500" />
-            <span>{CONTACT_EMAIL}</span>
-          </a>
-          <span className="text-[10px] text-gray-600 font-mono">
-            World Monitor Intelligence Platform
-          </span>
+        {/* Footer Contact & WhatsApp */}
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+          {contactEmail && (
+            <a
+              href={`mailto:${contactEmail}`}
+              className="inline-flex items-center gap-2 text-xs font-mono text-gray-400 hover:text-cyan-300 transition"
+            >
+              <Mail className="w-3.5 h-3.5 text-cyan-500" />
+              <span>{contactEmail}</span>
+            </a>
+          )}
+          {whatsappNumber && (
+            <a
+              href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-xs font-mono text-emerald-400 hover:text-emerald-300 transition"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <span>WhatsApp: {whatsappNumber}</span>
+            </a>
+          )}
+        </div>
+        <div className="mt-2 text-[10px] text-gray-600 font-mono text-center">
+          World Monitor Intelligence Platform
         </div>
       </div>
     </div>
