@@ -87,16 +87,18 @@ async function callAIProvider(
 ): Promise<{ text: string; provider: string }> {
   const signal = AbortSignal.timeout(12000); // 12 detik batas per provider
 
-  // 1. Groq (Llama 3.3 70B - Sangat Cepat & Tanggap)
-  if (provider === 'groq' && keys.groq) {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  // 1. OpenRouter (Primary #1 — Gateway Global AI Terdepan)
+  if (provider === 'openrouter' && keys.openrouter) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${keys.groq}`,
+        Authorization: `Bearer ${keys.openrouter}`,
+        'HTTP-Referer': 'https://world-monitoring.jack-ai.my.id',
+        'X-Title': 'World Monitor Intelligence',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'deepseek/deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt },
@@ -108,13 +110,13 @@ async function callAIProvider(
     });
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Groq HTTP ${res.status}: ${errText.slice(0, 150)}`);
+      throw new Error(`OpenRouter HTTP ${res.status}: ${errText.slice(0, 150)}`);
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: any = await res.json();
     const text = data.choices?.[0]?.message?.content || '';
-    if (!text) throw new Error('Groq mengembalikan respons kosong');
-    return { text, provider: 'Groq (Llama 3.3 70B)' };
+    if (!text) throw new Error('OpenRouter mengembalikan respons kosong');
+    return { text, provider: 'OpenRouter (Primary AI)' };
   }
 
   // 2. Google Gemini (2.0 Flash)
@@ -200,7 +202,37 @@ async function callAIProvider(
     return { text, provider: 'OpenAI (GPT-4o-mini)' };
   }
 
-  // 5. Mistral AI (Mistral Small Latest)
+  // 5. Groq (Backup #5 - Llama 3.3 70B Versatile)
+  if (provider === 'groq' && keys.groq) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${keys.groq}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5,
+        max_tokens: 1500,
+      }),
+      signal,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Groq HTTP ${res.status}: ${errText.slice(0, 150)}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    if (!text) throw new Error('Groq mengembalikan respons kosong');
+    return { text, provider: 'Groq (Llama 3.3 70B - Backup 5)' };
+  }
+
+  // 6. Mistral AI (Mistral Small Latest)
   if (provider === 'mistral' && keys.mistral) {
     const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
@@ -228,36 +260,6 @@ async function callAIProvider(
     const text = data.choices?.[0]?.message?.content || '';
     if (!text) throw new Error('Mistral mengembalikan respons kosong');
     return { text, provider: 'Mistral AI' };
-  }
-
-  // 6. OpenRouter (Unified Gateway Backup)
-  if (provider === 'openrouter' && keys.openrouter) {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${keys.openrouter}`,
-        'HTTP-Referer': 'https://world-monitor.aqsholhalqi4.workers.dev',
-        'X-Title': 'World Monitor Intelligence',
-      },
-      body: JSON.stringify({
-        model: 'deepseek/deepseek-chat',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-      }),
-      signal,
-    });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`OpenRouter HTTP ${res.status}: ${errText.slice(0, 150)}`);
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data: any = await res.json();
-    const text = data.choices?.[0]?.message?.content || '';
-    if (!text) throw new Error('OpenRouter mengembalikan respons kosong');
-    return { text, provider: 'OpenRouter' };
   }
 
   throw new Error(`Key untuk provider "${provider}" belum tersedia atau tidak aktif`);
@@ -297,44 +299,8 @@ interface FeedbackItem {
 let nextDeviceId = 100;
 const DEVICE_REGISTRY: Record<string, { id: number; name: string; deviceType: 'mobile' | 'tablet' | 'desktop' }> = {};
 
-const GLOBAL_FEEDBACKS: FeedbackItem[] = [
-  {
-    id: 'fb-1',
-    deviceId: 12,
-    authorName: 'Anonim12',
-    rating: 5,
-    comment: 'Platform intelijen tercepat dan visualisasi petanya sangat memukau!',
-    createdAt: Date.now() - 3600000 * 24 * 3,
-    deviceType: 'mobile',
-  },
-  {
-    id: 'fb-2',
-    deviceId: 27,
-    authorName: 'Anonim27',
-    rating: 5,
-    comment: 'Data seismik dan radar cuacanya akurat banget. Keren abis.',
-    createdAt: Date.now() - 3600000 * 24 * 2,
-    deviceType: 'desktop',
-  },
-  {
-    id: 'fb-3',
-    deviceId: 45,
-    authorName: 'Anonim45',
-    rating: 4,
-    comment: 'Fitur AI analitiknya ngebantu banget pantau geopolitik global.',
-    createdAt: Date.now() - 3600000 * 18,
-    deviceType: 'mobile',
-  },
-  {
-    id: 'fb-4',
-    deviceId: 88,
-    authorName: 'Anonim88',
-    rating: 5,
-    comment: 'Tampilannya futuristik dan responsif banget diakses lewat HP.',
-    createdAt: Date.now() - 3600000 * 5,
-    deviceType: 'mobile',
-  },
-];
+// Basis data ulasan asli pengunjung (tanpa data fiktif / sample mock)
+const GLOBAL_FEEDBACKS: FeedbackItem[] = [];
 
 function resolveDeviceFingerprint(clientIP: string, ua: string, hw: string): { key: string; deviceType: 'mobile' | 'tablet' | 'desktop' } {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
@@ -607,12 +573,12 @@ export default {
         if (url.pathname === '/api/ai/providers') {
           const keys = getAIKeys(env);
           const available = [];
+          if (keys.openrouter) available.push({ id: 'openrouter', name: 'OpenRouter (Primary AI Gateway)' });
           if (keys.gemini) available.push({ id: 'gemini', name: 'Google Gemini 2.0 Flash' });
-          if (keys.groq) available.push({ id: 'groq', name: 'Groq (Llama 3.3 70B)' });
           if (keys.deepseek) available.push({ id: 'deepseek', name: 'DeepSeek V3' });
           if (keys.openai) available.push({ id: 'openai', name: 'OpenAI (GPT-4o-mini)' });
+          if (keys.groq) available.push({ id: 'groq', name: 'Groq (Llama 3.3 70B - Backup 5)' });
           if (keys.mistral) available.push({ id: 'mistral', name: 'Mistral AI' });
-          if (keys.openrouter) available.push({ id: 'openrouter', name: 'OpenRouter' });
 
           return jsonResponse({ available });
         }
@@ -624,7 +590,7 @@ export default {
           // Input sanitization — strip potential XSS/injection vectors
           const sanitize = (s: string) => s.replace(/<script[^>]*>.*?<\/script>/gi, '').replace(/on\w+\s*=/gi, '').replace(/javascript:/gi, '').replace(/(DROP|DELETE|INSERT|UPDATE|ALTER|EXEC)\s/gi, '[BLOCKED] ').slice(0, 5000);
           const prompt = sanitize(body.prompt || '');
-          const preferred = body.provider || 'groq';
+          const preferred = body.provider || 'openrouter';
           const systemPrompt = body.systemPrompt || 
             'Anda adalah AI Global Intelligence Analyst untuk platform World Monitor. Berikan analisis ringkas, tajam, profesional, dan berbasis data tanpa basa-basi.';
 
@@ -634,8 +600,8 @@ export default {
 
           const keys = getAIKeys(env);
 
-          // Susun antrian failover: preferred diprioritaskan, diikuti provider ber-key lainnya
-          const allProviders = ['groq', 'gemini', 'deepseek', 'openai', 'mistral', 'openrouter'];
+          // Susun antrian failover: OpenRouter Primary (#1), Gemini (#2), DeepSeek (#3), OpenAI (#4), Groq (#5), Mistral (#6)
+          const allProviders = ['openrouter', 'gemini', 'deepseek', 'openai', 'groq', 'mistral'];
           const prioritized = [preferred, ...allProviders.filter(p => p !== preferred)];
 
           // Filter hanya provider yang kuncinya tersedia di env

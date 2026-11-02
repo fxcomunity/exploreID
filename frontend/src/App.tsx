@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import AdminProfileButton from './components/AdminProfileButton';
 import RatingFeedbackModal, { FeedbackHeaderWidget } from './components/RatingFeedbackModal';
+import Footer from './components/Footer';
 import { isAdminAuthenticated } from './lib/auth';
 import { Menu } from 'lucide-react';
 
@@ -123,8 +124,11 @@ export default function App() {
         )}
 
         {/* Scrollable Main Content Container — SEMUA HALAMAN BISA DI-SCROLL LANCAR */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 scroll-smooth w-full overscroll-contain pb-16 md:pb-6">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 scroll-smooth w-full overscroll-contain flex flex-col justify-between">
+          <div className="flex-1 min-w-0">
+            <Outlet />
+          </div>
+          {location.pathname !== '/map' && location.pathname !== '/' && <Footer />}
         </main>
 
         {/* Modal Suka & Rating 1-5 Bintang & Komentar */}

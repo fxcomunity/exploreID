@@ -50,7 +50,7 @@ export default function RatingFeedbackModal({
 }) {
   const [data, setData] = useState<FeedbackState>({
     totalRatings: 0,
-    averageRating: 5.0,
+    averageRating: 0,
     ratingCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
     feedbacks: [],
   });
@@ -68,7 +68,11 @@ export default function RatingFeedbackModal({
     try {
       const hw = getDeviceHardwareFingerprint();
       const savedId = localStorage.getItem('wm_device_id') || '';
-      const res = await fetch(`/api/feedback?hw=${encodeURIComponent(hw)}&deviceId=${savedId}`, {
+      const savedRating = localStorage.getItem('wm_user_rating') || '';
+      const savedComment = localStorage.getItem('wm_user_comment') || '';
+
+      const syncParams = savedRating ? `&syncRating=${savedRating}&syncComment=${encodeURIComponent(savedComment)}` : '';
+      const res = await fetch(`/api/feedback?hw=${encodeURIComponent(hw)}&deviceId=${savedId}${syncParams}`, {
         cache: 'no-store',
       });
       if (res.ok) {
@@ -87,6 +91,11 @@ export default function RatingFeedbackModal({
           setRating(json.myFeedback.rating);
           setComment(json.myFeedback.comment || '');
           setAuthorName(json.myFeedback.authorName || json.identity?.name || '');
+          localStorage.setItem('wm_user_rating', String(json.myFeedback.rating));
+          localStorage.setItem('wm_user_comment', json.myFeedback.comment || '');
+        } else if (savedRating) {
+          setRating(Number(savedRating));
+          setComment(savedComment);
         } else if (json.identity?.name && !authorName) {
           setAuthorName(json.identity.name);
         }
@@ -138,12 +147,16 @@ export default function RatingFeedbackModal({
             identity: result.identity,
           }));
 
+          // Simpan permanen di browser client agar tidak pernah hilang
+          localStorage.setItem('wm_user_rating', String(rating));
+          localStorage.setItem('wm_user_comment', comment.trim());
+
           if (result.identity?.id) {
             localStorage.setItem('wm_device_id', String(result.identity.id));
             localStorage.setItem('wm_device_name', result.identity.name);
           }
 
-          setSuccessMsg('Terima kasih! Suka & Ulasan Anda berhasil disimpan.');
+          setSuccessMsg('Terima kasih! Suka & Ulasan Anda berhasil disimpan permanen.');
           setTimeout(() => setSuccessMsg(''), 4000);
           // Beritahu widget global
           window.dispatchEvent(new CustomEvent('wm-feedback-updated'));
@@ -531,8 +544,8 @@ export function FeedbackHeaderWidget({ onClick }: { onClick: () => void }) {
 /** Badge tombol rating di Hero Landing Page di atas sistem */
 export function FeedbackHeroBadge({ onClick }: { onClick: () => void }) {
   const [stats, setStats] = useState<{ rating: number; count: number }>({
-    rating: 5.0,
-    count: 4,
+    rating: 0,
+    count: 0,
   });
 
   useEffect(() => {
@@ -564,10 +577,10 @@ export function FeedbackHeroBadge({ onClick }: { onClick: () => void }) {
         className="w-5 h-5 object-contain drop-shadow-[0_0_8px_rgba(0,229,255,0.85)]"
       />
       <span className="font-bold flex items-center gap-1">
-        <span>{stats.rating.toFixed(1)} / 5.0</span>
+        <span>{stats.count > 0 ? `${stats.rating.toFixed(1)} / 5.0` : 'Belum Ada Ulasan'}</span>
       </span>
-      <span className="text-gray-400">({stats.count} Ulasan Suka)</span>
-      <span className="text-cyan-400 hover:underline ml-1">Beri Nilai →</span>
+      <span className="text-gray-400">({stats.count} Suka)</span>
+      <span className="text-cyan-400 hover:underline ml-1">{stats.count > 0 ? 'Beri Nilai →' : 'Jadilah Yang Pertama →'}</span>
     </button>
   );
 }

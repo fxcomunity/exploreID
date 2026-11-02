@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import Globe from 'globe.gl';
 import {
   RefreshCw, Navigation, Layers, RotateCcw,
-  ZoomIn, ZoomOut, Eye, EyeOff, Radio, Globe as GlobeIcon, X, Sun, Moon
+  ZoomIn, ZoomOut, Eye, EyeOff, Radio, Globe as GlobeIcon, X, Sun, Moon,
+  Menu, Maximize2, Minimize2, Sparkles, Orbit, Compass, SlidersHorizontal
 } from 'lucide-react';
 import { fetchDisasters, fetchEarthquakes } from '../lib/api';
 
@@ -92,6 +93,7 @@ interface CountryFeature {
     GDP_MD_EST?: number;
     ECONOMY?: string;
     INCOME_GRP?: string;
+    REGION_UN?: string;
   };
   geometry: any;
 }
@@ -103,11 +105,105 @@ const LAYER_PRESETS = [
   { id: 'other',    label: 'Anomali Lain',    color: '#818cf8' },
 ];
 
+export type GlobeTheme = 'DAY_NIGHT' | 'CYBER_GRID' | 'BLUE_MARBLE' | 'NIGHT_CITIES';
+
+// ─── Procedural Canvas Texture Generator untuk Objek Tata Surya ───────────
+function createSunTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(256, 256, 40, 256, 256, 256);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.2, '#fff2a3');
+  grad.addColorStop(0.5, '#ffaa00');
+  grad.addColorStop(0.8, '#ff5500');
+  grad.addColorStop(1, '#991100');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Flare noise spots
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  for (let i = 0; i < 40; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const r = Math.random() * 20 + 5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createMarsTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#b7410e';
+  ctx.fillRect(0, 0, 512, 256);
+
+  // Craters & dark rust bands
+  ctx.fillStyle = '#8a2b00';
+  for (let i = 0; i < 30; i++) {
+    const y = Math.random() * 180 + 38;
+    const h = Math.random() * 25 + 5;
+    ctx.fillRect(0, y, 512, h);
+  }
+
+  // Polar Ice Caps
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(0, 0, 512, 22);
+  ctx.fillRect(0, 234, 512, 22);
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createMoonTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#78716c';
+  ctx.fillRect(0, 0, 256, 256);
+
+  ctx.fillStyle = '#44403c';
+  for (let i = 0; i < 60; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const r = Math.random() * 14 + 2;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createJupiterTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  const colors = ['#c28b5e', '#e7c697', '#935832', '#d9af82', '#a66b42', '#edd5b3'];
+  for (let y = 0; y < 256; y += 8) {
+    ctx.fillStyle = colors[(y / 8) % colors.length];
+    ctx.fillRect(0, y, 512, 8);
+  }
+  // Great Red Spot
+  ctx.fillStyle = '#b91c1c';
+  ctx.beginPath();
+  ctx.ellipse(340, 160, 28, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  return new THREE.CanvasTexture(canvas);
+}
+
 export default function GoogleEarthGlobeMap() {
   const globeContainerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeInstanceRef = useRef<any>(null);
   const shaderMatRef = useRef<THREE.ShaderMaterial | null>(null);
+  const solarGroupRef = useRef<THREE.Group | null>(null);
+  const animFrameIdRef = useRef<number | null>(null);
 
   // States
   const [events, setEvents] = useState<WMEvent[]>([]);
@@ -118,9 +214,19 @@ export default function GoogleEarthGlobeMap() {
   const [hoveredCountry, setHoveredCountry] = useState<CountryFeature | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isRotating, setIsRotating] = useState<boolean>(true);
-  const [showEventList, setShowEventList] = useState<boolean>(true);
+  
+  // Hamburger / Drawer mode untuk Stream Incidents: 'collapsed' | 'normal' | 'expanded'
+  const [streamMode, setStreamMode] = useState<'collapsed' | 'normal' | 'expanded'>('normal');
+  const [streamSearch, setStreamSearch] = useState<string>('');
+  
   const [showLayerMenu, setShowLayerMenu] = useState<boolean>(false);
+  const [showThemeMenu, setShowThemeMenu] = useState<boolean>(false);
+  const [globeTheme, setGlobeTheme] = useState<GlobeTheme>('DAY_NIGHT');
   const [sunAngle, setSunAngle] = useState<number>(45);
+
+  // Tata Surya (Solar System) Mode
+  const [solarSystemActive, setSolarSystemActive] = useState<boolean>(true);
+  const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
 
   // ─── 1. Load GeoJSON Batas Negara HD ──────────────────────────────────────
   useEffect(() => {
@@ -191,7 +297,7 @@ export default function GoogleEarthGlobeMap() {
     loadData();
   }, [loadData]);
 
-  // ─── 3. Inisialisasi globe.gl dengan Day & Night Terminator Shader ─────────
+  // ─── 3. Inisialisasi globe.gl & Tata Surya (Solar System 3D) ───────────────
   useEffect(() => {
     const container = globeContainerRef.current;
     if (!container) return;
@@ -235,20 +341,14 @@ export default function GoogleEarthGlobeMap() {
           vec4 dayColor = texture2D(dayTexture, vUv);
           vec4 nightColor = texture2D(nightTexture, vUv);
 
-          // Dot product antara normal permukaan bumi dengan arah datang sinar matahari
           float dProd = dot(vWorldNormal, sunDirection);
-
-          // Transisi fajar/senja yang lembut (Terminator line)
           float dayFactor = smoothstep(-0.15, 0.20, dProd);
 
-          // Pendaran oranye senja/fajar di perbatasan siang dan malam
           float twilight = (1.0 - abs(dProd * 4.5));
           twilight = clamp(twilight, 0.0, 1.0) * (1.0 - dayFactor);
           vec3 sunsetGlow = vec3(1.0, 0.45, 0.12) * twilight * 0.45;
 
-          // Malam hari: lampu kota menyala berkilau
           vec3 finalColor = mix(nightColor.rgb * 1.6, dayColor.rgb, dayFactor) + sunsetGlow;
-
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `,
@@ -262,7 +362,7 @@ export default function GoogleEarthGlobeMap() {
       .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
       .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
       .atmosphereColor('#38bdf8')
-      .atmosphereAltitude(0.22)
+      .atmosphereAltitude(0.24)
       // ── Poligon Batas Negara Interaktif ──
       .polygonAltitude((feat: any) => (feat === hoveredCountry ? 0.05 : 0.012))
       .polygonCapColor((feat: any) => {
@@ -270,13 +370,13 @@ export default function GoogleEarthGlobeMap() {
         if (selectedCountry && feat.properties.ADMIN === selectedCountry.ADMIN) {
           return 'rgba(0, 229, 255, 0.35)';
         }
-        return 'rgba(2, 25, 60, 0.12)'; // Transparan halus agar siang/malam terlihat
+        return 'rgba(2, 25, 60, 0.12)';
       })
       .polygonSideColor(() => 'rgba(0, 229, 255, 0.25)')
       .polygonStrokeColor((feat: any) => {
         if (feat === hoveredCountry) return '#00e5ff';
         if (selectedCountry && feat.properties.ADMIN === selectedCountry.ADMIN) return '#38bdf8';
-        return 'rgba(0, 229, 255, 0.35)'; // Batas negara neon
+        return 'rgba(0, 229, 255, 0.35)';
       })
       .polygonLabel(({ properties: d }: any) => `
         <div style="background: rgba(3,9,30,0.92); border: 1px solid #00e5ff; padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 11px; color: #fff; box-shadow: 0 0 15px rgba(0,229,255,0.4);">
@@ -292,6 +392,7 @@ export default function GoogleEarthGlobeMap() {
       .onPolygonClick(({ properties: d }: any) => {
         setSelectedCountry(d);
         setSelectedEvent(null);
+        setSelectedPlanet(null);
       })
       // ── Pin Points ──
       .pointLat('lat')
@@ -336,9 +437,183 @@ export default function GoogleEarthGlobeMap() {
       controls.dampingFactor = 0.05;
     }
 
+    // ─── 4. BANGUN TATA SURYA 3D (SOLAR SYSTEM & CELESTIAL BODIES) ───────────
+    const scene: THREE.Scene = globe.scene();
+    const solarGroup = new THREE.Group();
+    solarGroup.name = 'SolarSystemGroup';
+
+    // A. 3D Stars Field (5,000 Partikel Bintang Kosmis)
+    const starCount = 4500;
+    const starGeo = new THREE.BufferGeometry();
+    const starPos = new Float32Array(starCount * 3);
+    const starColors = new Float32Array(starCount * 3);
+
+    for (let i = 0; i < starCount; i++) {
+      const radius = 600 + Math.random() * 500;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+
+      starPos[i * 3]     = radius * Math.sin(phi) * Math.cos(theta);
+      starPos[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      starPos[i * 3 + 2] = radius * Math.cos(phi);
+
+      // Variasi temperatur warna bintang: Putih, Biru, Emas, Merah
+      const type = Math.random();
+      if (type > 0.8) {
+        starColors[i * 3] = 0.7; starColors[i * 3 + 1] = 0.85; starColors[i * 3 + 2] = 1.0; // Biru
+      } else if (type > 0.6) {
+        starColors[i * 3] = 1.0; starColors[i * 3 + 1] = 0.85; starColors[i * 3 + 2] = 0.5; // Emas
+      } else if (type > 0.5) {
+        starColors[i * 3] = 1.0; starColors[i * 3 + 1] = 0.4; starColors[i * 3 + 2] = 0.3; // Merah
+      } else {
+        starColors[i * 3] = 1.0; starColors[i * 3 + 1] = 1.0; starColors[i * 3 + 2] = 1.0; // Putih
+      }
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+    const starMat = new THREE.PointsMaterial({
+      size: 2.2,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const starField = new THREE.Points(starGeo, starMat);
+    solarGroup.add(starField);
+
+    // B. MATAHARI (The Sun) — Radius ~420 dari Bumi
+    const sunGeo = new THREE.SphereGeometry(35, 32, 32);
+    const sunTex = createSunTexture();
+    const sunMat = new THREE.MeshBasicMaterial({
+      map: sunTex,
+      color: 0xfff0aa,
+    });
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    sunMesh.name = 'Matahari';
+    sunMesh.position.set(380, 50, 200);
+
+    // Glowing Corona Halo untuk Matahari
+    const coronaGeo = new THREE.SphereGeometry(44, 32, 32);
+    const coronaMat = new THREE.MeshBasicMaterial({
+      color: 0xffaa00,
+      transparent: true,
+      opacity: 0.22,
+      side: THREE.BackSide,
+    });
+    const coronaMesh = new THREE.Mesh(coronaGeo, coronaMat);
+    sunMesh.add(coronaMesh);
+
+    // Cahaya Matahari
+    const sunLight = new THREE.PointLight(0xfff3d0, 2.5, 2000, 0.4);
+    sunMesh.add(sunLight);
+    solarGroup.add(sunMesh);
+
+    // C. BULAN (The Moon) — Mengorbit Bumi pada jarak ~85
+    const moonGeo = new THREE.SphereGeometry(6, 24, 24);
+    const moonMat = new THREE.MeshStandardMaterial({
+      map: createMoonTexture(),
+      roughness: 0.9,
+      metalness: 0.1,
+    });
+    const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+    moonMesh.name = 'Bulan';
+    moonMesh.position.set(85, 10, 0);
+    solarGroup.add(moonMesh);
+
+    // Jalur Orbit Bulan
+    const moonOrbitGeo = new THREE.RingGeometry(84.6, 85.4, 64);
+    const orbitMat = new THREE.MeshBasicMaterial({
+      color: 0x00e5ff,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.15,
+    });
+    const moonOrbit = new THREE.Mesh(moonOrbitGeo, orbitMat);
+    moonOrbit.rotation.x = Math.PI / 2;
+    solarGroup.add(moonOrbit);
+
+    // D. PLANET MARS (Planet Merah) — Pada jarak orbit ~240
+    const marsGeo = new THREE.SphereGeometry(12, 32, 32);
+    const marsMat = new THREE.MeshStandardMaterial({
+      map: createMarsTexture(),
+      roughness: 0.8,
+    });
+    const marsMesh = new THREE.Mesh(marsGeo, marsMat);
+    marsMesh.name = 'Mars';
+    marsMesh.position.set(-230, -15, 120);
+
+    // Mars Atmosphere Glow
+    const marsAtmoGeo = new THREE.SphereGeometry(13.2, 32, 32);
+    const marsAtmoMat = new THREE.MeshBasicMaterial({
+      color: 0xd97706,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.BackSide,
+    });
+    marsMesh.add(new THREE.Mesh(marsAtmoGeo, marsAtmoMat));
+    solarGroup.add(marsMesh);
+
+    // Jalur Orbit Mars
+    const marsOrbitGeo = new THREE.RingGeometry(258, 260, 96);
+    const marsOrbitMat = new THREE.MeshBasicMaterial({
+      color: 0xf97316,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.15,
+    });
+    const marsOrbit = new THREE.Mesh(marsOrbitGeo, marsOrbitMat);
+    marsOrbit.rotation.x = Math.PI / 2;
+    solarGroup.add(marsOrbit);
+
+    // E. PLANET JUPITER (Raksasa Gas) — Pada jarak ~420
+    const jupiterGeo = new THREE.SphereGeometry(26, 32, 32);
+    const jupiterMat = new THREE.MeshStandardMaterial({
+      map: createJupiterTexture(),
+      roughness: 0.7,
+    });
+    const jupiterMesh = new THREE.Mesh(jupiterGeo, jupiterMat);
+    jupiterMesh.name = 'Jupiter';
+    jupiterMesh.position.set(160, -40, -380);
+    solarGroup.add(jupiterMesh);
+
+    scene.add(solarGroup);
+    solarGroupRef.current = solarGroup;
+
+    // ─── ANIMATION LOOP TATA SURYA ───────────────────────────────────────────
+    let orbitTick = 0;
+    const animateSolar = () => {
+      orbitTick += 0.0035;
+
+      // Rotasi Bulan mengelilingi Bumi
+      const moonR = 85;
+      moonMesh.position.x = Math.cos(orbitTick * 1.5) * moonR;
+      moonMesh.position.z = Math.sin(orbitTick * 1.5) * moonR;
+      moonMesh.position.y = Math.sin(orbitTick * 0.75) * 12;
+      moonMesh.rotation.y += 0.005;
+
+      // Rotasi Mars di orbitnya
+      const marsR = 260;
+      marsMesh.position.x = Math.cos(orbitTick * 0.6 + 1.2) * marsR;
+      marsMesh.position.z = Math.sin(orbitTick * 0.6 + 1.2) * marsR;
+      marsMesh.rotation.y += 0.008;
+
+      // Rotasi Jupiter
+      const jupiterR = 410;
+      jupiterMesh.position.x = Math.cos(orbitTick * 0.3 - 0.8) * jupiterR;
+      jupiterMesh.position.z = Math.sin(orbitTick * 0.3 - 0.8) * jupiterR;
+      jupiterMesh.rotation.y += 0.012;
+
+      // Rotasi Matahari pada porosnya
+      sunMesh.rotation.y += 0.002;
+
+      animFrameIdRef.current = requestAnimationFrame(animateSolar);
+    };
+
+    animFrameIdRef.current = requestAnimationFrame(animateSolar);
+
     globeInstanceRef.current = globe;
 
-    // Centering & Resize
+    // Resize handler
     const updateCentering = () => {
       if (container && globe) {
         const w = container.clientWidth;
@@ -346,14 +621,18 @@ export default function GoogleEarthGlobeMap() {
         globe.width(w);
         globe.height(h);
 
-        const cam = globe.camera();
+        const cam = globe.camera() as any;
         if (cam) {
-          if (showEventList && w > 1024) {
+          if (streamMode === 'normal' && w > 1024) {
             cam.setViewOffset(w, h, -160, 0, w, h);
-          } else {
+          } else if (streamMode === 'expanded' && w > 1024) {
+            cam.setViewOffset(w, h, -240, 0, w, h);
+          } else if (cam.clearViewOffset) {
             cam.clearViewOffset();
           }
-          cam.updateProjectionMatrix();
+          if (cam.updateProjectionMatrix) {
+            cam.updateProjectionMatrix();
+          }
         }
       }
     };
@@ -362,12 +641,54 @@ export default function GoogleEarthGlobeMap() {
     window.addEventListener('resize', updateCentering);
 
     return () => {
+      if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
       window.removeEventListener('resize', updateCentering);
       container.innerHTML = '';
       globeInstanceRef.current = null;
       shaderMatRef.current = null;
+      solarGroupRef.current = null;
     };
-  }, [showEventList]);
+  }, [streamMode]);
+
+  // ─── Toggle Tampilan Tata Surya ───────────────────────────────────────────
+  useEffect(() => {
+    if (solarGroupRef.current) {
+      solarGroupRef.current.visible = solarSystemActive;
+    }
+  }, [solarSystemActive]);
+
+  // ─── Ganti Globe Theme / Skin ─────────────────────────────────────────────
+  useEffect(() => {
+    const globe = globeInstanceRef.current;
+    if (!globe) return;
+
+    if (globeTheme === 'DAY_NIGHT') {
+      if (shaderMatRef.current) {
+        globe.globeMaterial(shaderMatRef.current);
+      }
+      globe.atmosphereColor('#38bdf8');
+    } else if (globeTheme === 'CYBER_GRID') {
+      // Holographic Neon Wireframe Cyberpunk Globe
+      const cyberMat = new THREE.MeshStandardMaterial({
+        color: 0x051329,
+        roughness: 0.3,
+        metalness: 0.8,
+        wireframe: false,
+      });
+      globe.globeMaterial(cyberMat);
+      globe.atmosphereColor('#00e5ff');
+    } else if (globeTheme === 'BLUE_MARBLE') {
+      const tex = new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg');
+      tex.colorSpace = THREE.SRGBColorSpace;
+      globe.globeMaterial(new THREE.MeshStandardMaterial({ map: tex }));
+      globe.atmosphereColor('#60a5fa');
+    } else if (globeTheme === 'NIGHT_CITIES') {
+      const tex = new THREE.TextureLoader().load('https://unpkg.com/three-globe/example/img/earth-night.jpg');
+      tex.colorSpace = THREE.SRGBColorSpace;
+      globe.globeMaterial(new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex }));
+      globe.atmosphereColor('#818cf8');
+    }
+  }, [globeTheme]);
 
   // ─── Update Sinar Matahari Saat Angle Berubah ─────────────────────────────
   useEffect(() => {
@@ -412,6 +733,7 @@ export default function GoogleEarthGlobeMap() {
   const flyToEvent = (ev: WMEvent) => {
     setSelectedEvent(ev);
     setSelectedCountry(null);
+    setSelectedPlanet(null);
     const globe = globeInstanceRef.current;
     if (!globe) return;
 
@@ -425,44 +747,76 @@ export default function GoogleEarthGlobeMap() {
     );
   };
 
+  // ─── Focus Camera ke Objek Tata Surya ─────────────────────────────────────
+  const focusCelestialObject = (name: string) => {
+    setSelectedPlanet(name);
+    setSelectedEvent(null);
+    setSelectedCountry(null);
+    const globe = globeInstanceRef.current;
+    if (!globe) return;
+
+    if (name === 'Bumi') {
+      globe.pointOfView({ lat: 10, lng: 115, altitude: 2.2 }, 1000);
+    } else if (name === 'Bulan') {
+      globe.pointOfView({ lat: 0, lng: 0, altitude: 3.5 }, 1200);
+    } else if (name === 'Mars') {
+      globe.pointOfView({ lat: -15, lng: 120, altitude: 4.2 }, 1400);
+    } else if (name === 'Matahari') {
+      globe.pointOfView({ lat: 20, lng: -45, altitude: 4.5 }, 1400);
+    } else if (name === 'Jupiter') {
+      globe.pointOfView({ lat: -30, lng: -120, altitude: 4.8 }, 1500);
+    }
+  };
+
   const toggleLayer = (id: string) => {
     setActiveLayers(prev =>
       prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]
     );
   };
 
+  const filteredEvents = events.filter(e => 
+    !streamSearch || e.title.toLowerCase().includes(streamSearch.toLowerCase()) || e.category.toLowerCase().includes(streamSearch.toLowerCase())
+  );
+
   const selectedMeta = selectedEvent ? getCategoryMeta(selectedEvent.category) : null;
 
   return (
     <div className="relative w-full h-full bg-[#020510] text-white font-mono overflow-hidden select-none">
-      {/* ─── 1. KANVAS 3D GLOBE DENGAN DAY & NIGHT TERMINATOR ─── */}
+      {/* ─── 1. KANVAS 3D GLOBE DENGAN DAY & NIGHT TERMINATOR & TATA SURYA ─── */}
       <div
         ref={globeContainerRef}
         className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing"
       />
 
-      {/* ─── 2. FLOATING HUD KIRI ATAS: BRANDING & KONTROL SIANG/MALAM ─── */}
-      <div className="absolute top-5 left-5 z-20 flex flex-col gap-2 pointer-events-auto">
-        <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#040d21]/80 backdrop-blur-md border border-cyan-500/30 shadow-[0_0_20px_rgba(0,229,255,0.2)]">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff]" />
-          <div>
-            <div className="text-xs font-bold tracking-widest text-white uppercase flex items-center gap-2">
+      {/* ─── 2. FLOATING HUD KIRI ATAS: BRANDING & KONTROL MODE ─── */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto max-w-sm sm:max-w-md">
+        <div className="flex items-center gap-2.5 px-3 sm:px-4 py-2 rounded-xl bg-[#040d21]/85 backdrop-blur-md border border-cyan-500/30 shadow-[0_0_20px_rgba(0,229,255,0.2)]">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#00e5ff] flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="text-xs font-bold tracking-widest text-white uppercase flex items-center gap-2 flex-wrap">
               <span>WORLD MONITOR</span>
-              <span className="text-[10px] text-amber-400 border border-amber-800/80 px-1.5 py-0.2 rounded bg-amber-950/60 font-bold">
-                GOOGLE EARTH DAY/NIGHT
+              <span className="text-[9px] text-amber-300 border border-amber-600/70 px-1.5 py-0.2 rounded bg-amber-950/60 font-bold">
+                {globeTheme.replace('_', ' ')}
               </span>
+              {solarSystemActive && (
+                <span className="text-[9px] text-cyan-300 border border-cyan-500/60 px-1.5 py-0.2 rounded bg-cyan-950/60 font-bold flex items-center gap-1">
+                  <Orbit className="w-3 h-3 text-cyan-400" />
+                  TATA SURYA AKTIF
+                </span>
+              )}
             </div>
-            <div className="text-[10px] text-gray-400">
-              PANCARAN SIANG & MALAM • {countries.length} NEGARA DAPAT DIKLIK
+            <div className="text-[10px] text-gray-400 truncate">
+              {countries.length} NEGARA · BINTANG, MATAHARI & MARS 3D
             </div>
           </div>
         </div>
 
-        {/* Rotasi, Arah Matahari & Layers */}
-        <div className="flex items-center gap-2">
+        {/* Action Toolbar: Rotasi, Tema Globe, Tata Surya, dan Layers */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Rotasi ON/OFF */}
           <button
             onClick={() => setIsRotating(!isRotating)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md transition-all ${
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md transition-all ${
               isRotating
                 ? 'bg-cyan-950/60 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(0,229,255,0.25)]'
                 : 'bg-black/40 border-gray-800 text-gray-500 hover:text-gray-300'
@@ -471,41 +825,100 @@ export default function GoogleEarthGlobeMap() {
             {isRotating ? 'ROTASI: ON' : 'ROTASI: OFF'}
           </button>
 
-          {/* Geser Posisi Matahari (Simulasi Siang & Malam) */}
+          {/* Ganti Tema Globe / Model Peta */}
           <button
-            onClick={() => setSunAngle((prev) => (prev + 45) % 360)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-700/60 bg-amber-950/40 text-amber-300 hover:border-amber-400 backdrop-blur-md transition"
-            title="Klik untuk mengubah posisi matahari / bayangan siang & malam"
+            onClick={() => setShowThemeMenu(!showThemeMenu)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-950/60 border border-blue-700/60 hover:border-blue-400 backdrop-blur-md transition"
+            title="Pilih Model Globe yang Lain"
           >
-            <Sun className="w-3.5 h-3.5 text-amber-400" />
-            MATAHARI: {sunAngle}°
+            <GlobeIcon className="w-3.5 h-3.5 text-blue-400" />
+            TEMA GLOBE
           </button>
+
+          {/* Toggle Tata Surya 3D */}
+          <button
+            onClick={() => setSolarSystemActive(!solarSystemActive)}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md transition ${
+              solarSystemActive
+                ? 'bg-amber-950/60 border-amber-500/70 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                : 'bg-black/40 border-gray-800 text-gray-500'
+            }`}
+            title="Nyalakan / Matikan Objek Tata Surya 3D (Matahari, Mars, Bulan, Bintang)"
+          >
+            <Orbit className="w-3.5 h-3.5 text-amber-400" />
+            TATA SURYA
+          </button>
+
+          {/* Geser Posisi Matahari */}
+          {globeTheme === 'DAY_NIGHT' && (
+            <button
+              onClick={() => setSunAngle((prev) => (prev + 45) % 360)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-amber-700/60 bg-amber-950/40 text-amber-300 hover:border-amber-400 backdrop-blur-md transition"
+              title="Ubah posisi datang sinar matahari (Siang & Malam)"
+            >
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              {sunAngle}°
+            </button>
+          )}
 
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-cyan-400 bg-[#040d21]/80 border border-cyan-800/60 hover:border-cyan-400 backdrop-blur-md transition"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-cyan-400 bg-[#040d21]/80 border border-cyan-800/60 hover:border-cyan-400 backdrop-blur-md transition"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            REFRESH
           </button>
 
           <button
             onClick={() => setShowLayerMenu(!showLayerMenu)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md transition ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border backdrop-blur-md transition ${
               showLayerMenu
-                ? 'bg-cyan-500 text-black border-cyan-400 font-bold'
+                ? 'bg-cyan-500 text-black border-cyan-400'
                 : 'bg-[#040d21]/80 border-cyan-800/60 text-cyan-400 hover:border-cyan-400'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            LAYERS
+            FILTER
           </button>
         </div>
 
-        {/* Floating Layer Dropdown */}
+        {/* Dropdown Pilihan Model Globe */}
+        {showThemeMenu && (
+          <div className="p-3 rounded-xl bg-[#03091e]/95 backdrop-blur-xl border border-blue-500/40 shadow-2xl space-y-1.5 w-60 mt-1">
+            <div className="text-[10px] text-blue-300 font-bold tracking-wider mb-2 uppercase flex items-center justify-between">
+              <span>PILIH MODEL GLOBE</span>
+              <button onClick={() => setShowThemeMenu(false)} className="text-gray-400 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {[
+              { id: 'DAY_NIGHT', label: 'NASA Day & Night (Realistis)', desc: 'Terminator fajar/senja aktif' },
+              { id: 'CYBER_GRID', label: 'Cyberpunk Hologram (Neon)', desc: 'Matriks gelap futuristik' },
+              { id: 'BLUE_MARBLE', label: 'NASA Blue Marble Klasik', desc: 'Satelit atmosfer siang hari' },
+              { id: 'NIGHT_CITIES', label: 'Earth at Night (Lampu Kota)', desc: 'Gemerlap metropolitan dunia' },
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setGlobeTheme(t.id as GlobeTheme);
+                  setShowThemeMenu(false);
+                }}
+                className={`w-full text-left p-2 rounded-lg border text-xs transition ${
+                  globeTheme === t.id
+                    ? 'bg-blue-900/40 border-blue-400 text-white font-bold'
+                    : 'bg-black/40 border-gray-800 text-gray-400 hover:text-white hover:border-blue-800'
+                }`}
+              >
+                <div className="text-[11px] text-white">{t.label}</div>
+                <div className="text-[9px] text-gray-500">{t.desc}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Dropdown Filter Layer */}
         {showLayerMenu && (
-          <div className="p-3 rounded-xl bg-[#03091e]/90 backdrop-blur-xl border border-cyan-500/40 shadow-2xl space-y-1.5 w-52 mt-1">
+          <div className="p-3 rounded-xl bg-[#03091e]/95 backdrop-blur-xl border border-cyan-500/40 shadow-2xl space-y-1.5 w-52 mt-1">
             <div className="text-[10px] text-gray-400 font-bold tracking-wider mb-2">ACTIVE LAYERS FILTER</div>
             {LAYER_PRESETS.map((lp) => {
               const active = activeLayers.includes(lp.id);
@@ -533,10 +946,39 @@ export default function GoogleEarthGlobeMap() {
             })}
           </div>
         )}
+
+        {/* Quick Planet Selector Bar (Muncul Saat Tata Surya Aktif) */}
+        {solarSystemActive && (
+          <div className="flex items-center gap-1 p-1.5 rounded-xl bg-black/60 border border-amber-900/40 backdrop-blur-md overflow-x-auto">
+            <span className="text-[9px] text-amber-400 font-bold px-1 uppercase flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              FOKUS:
+            </span>
+            {[
+              { name: 'Bumi', color: 'text-cyan-400' },
+              { name: 'Bulan', color: 'text-gray-300' },
+              { name: 'Mars', color: 'text-orange-400' },
+              { name: 'Matahari', color: 'text-yellow-400' },
+              { name: 'Jupiter', color: 'text-amber-400' },
+            ].map(p => (
+              <button
+                key={p.name}
+                onClick={() => focusCelestialObject(p.name)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition border ${
+                  selectedPlanet === p.name
+                    ? 'bg-amber-950 border-amber-400 text-white'
+                    : 'bg-black/40 border-gray-800 text-gray-400 hover:text-white'
+                }`}
+              >
+                <span className={p.color}>{p.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── 3. FLOATING VIEW CONTROLS (KANAN ATAS) ─── */}
-      <div className="absolute top-5 right-5 z-20 flex flex-col gap-2 pointer-events-auto">
+      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
         <button
           onClick={() => {
             const globe = globeInstanceRef.current;
@@ -546,7 +988,7 @@ export default function GoogleEarthGlobeMap() {
             }
           }}
           title="Zoom In"
-          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg"
+          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
@@ -555,11 +997,11 @@ export default function GoogleEarthGlobeMap() {
             const globe = globeInstanceRef.current;
             if (globe) {
               const pov = globe.pointOfView();
-              globe.pointOfView({ altitude: Math.min(4.5, pov.altitude + 0.45) }, 400);
+              globe.pointOfView({ altitude: Math.min(5.5, pov.altitude + 0.45) }, 400);
             }
           }}
           title="Zoom Out"
-          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg"
+          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
@@ -568,27 +1010,96 @@ export default function GoogleEarthGlobeMap() {
             const globe = globeInstanceRef.current;
             if (globe) {
               globe.pointOfView({ lat: 10, lng: 115, altitude: 2.2 }, 800);
+              setSelectedPlanet(null);
             }
           }}
           title="Reset Globe View"
-          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg"
+          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
+
+        {/* Toggle Mode Hamburger Stream Incidents */}
         <button
-          onClick={() => setShowEventList(!showEventList)}
-          title={showEventList ? 'Sembunyikan Panel Informasi' : 'Tampilkan Panel Informasi'}
-          className="w-9 h-9 rounded-xl bg-[#040d21]/80 hover:bg-cyan-950/80 border border-cyan-800/60 hover:border-cyan-400 text-cyan-400 flex items-center justify-center backdrop-blur-md transition shadow-lg"
+          onClick={() => setStreamMode(prev => prev === 'collapsed' ? 'normal' : 'collapsed')}
+          title={streamMode === 'collapsed' ? 'Buka Panel Stream Incidents' : 'Ciutkan Panel ke Mode Hamburger'}
+          className={`w-9 h-9 rounded-xl border flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer ${
+            streamMode === 'collapsed'
+              ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+              : 'bg-[#040d21]/80 border-cyan-800/60 text-cyan-400 hover:border-cyan-400'
+          }`}
         >
-          {showEventList ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <Menu className="w-4 h-4" />
         </button>
       </div>
 
-      {/* ─── 4. FLOATING TARGET & COUNTRY INSPECTOR (KANAN MELAYANG) ─── */}
-      {showEventList && (
-        <div className="absolute bottom-5 right-5 top-20 w-80 z-20 flex flex-col gap-3 pointer-events-auto">
-          {/* A. Country Inspector (Muncul Saat Negara di Globe Dipencet) */}
-          {selectedCountry && (
+      {/* ─── 4. FLOATING HAMBURGER PILL SAAT STREAM DICIOUTKAN (COLLAPSED) ─── */}
+      {streamMode === 'collapsed' && (
+        <div className="absolute bottom-5 right-5 z-20 pointer-events-auto">
+          <button
+            onClick={() => setStreamMode('normal')}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-[#040d21]/90 hover:bg-cyan-950/90 border border-cyan-500/60 hover:border-cyan-400 text-cyan-300 hover:text-white shadow-[0_0_25px_rgba(0,229,255,0.3)] backdrop-blur-xl transition group cursor-pointer"
+          >
+            <Menu className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+            <div className="text-left font-mono">
+              <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>STREAM INCIDENTS</span>
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              </div>
+              <div className="text-[10px] text-cyan-400">{events.length} TITIK INSIDEN AKTIF</div>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* ─── 5. FLOATING TARGET, CELESTIAL & STREAM INCIDENTS PANEL ─── */}
+      {streamMode !== 'collapsed' && (
+        <div
+          className={`absolute bottom-5 right-5 top-16 z-20 flex flex-col gap-3 pointer-events-auto transition-all duration-300 ${
+            streamMode === 'expanded' ? 'w-full max-w-lg' : 'w-80'
+          }`}
+        >
+          {/* A. Celestial Inspector (Muncul Saat Planet/Matahari Diklik) */}
+          {selectedPlanet && (
+            <div className="p-3.5 rounded-2xl border border-amber-500/60 bg-[#081226]/95 backdrop-blur-xl shadow-[0_0_25px_rgba(245,158,11,0.25)] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold tracking-widest uppercase text-amber-400 flex items-center gap-1.5">
+                  <Orbit className="w-3.5 h-3.5" />
+                  OBJEK TATA SURYA 3D
+                </span>
+                <button
+                  onClick={() => setSelectedPlanet(null)}
+                  className="text-gray-500 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="text-base font-bold text-white leading-tight flex items-center justify-between">
+                <span>{selectedPlanet}</span>
+                <span className="text-xs text-amber-300 font-mono">3D Mesh Orbit</span>
+              </div>
+
+              <div className="text-[11px] text-gray-300 leading-snug">
+                {selectedPlanet === 'Bumi' && 'Planet hunian berpenghuni dengan biosfer, atmosfer nitrogen-oksigen, dan siklus pemantauan real-time satelit.'}
+                {selectedPlanet === 'Matahari' && 'Bintang pusat tata surya dengan suhu permukaan ~5.500°C yang memancarkan energi foton dan siklus siang-malam Bumi.'}
+                {selectedPlanet === 'Bulan' && 'Satelit alami Bumi pada jarak ~384.400 km yang mengontrol siklus pasang surut air laut global.'}
+                {selectedPlanet === 'Mars' && 'Planet terestrial merah berpasir besi oksida dengan dua kutub es dan eksplorasi rover misi antariksa.'}
+                {selectedPlanet === 'Jupiter' && 'Raksasa gas terbesar di tata surya dengan badai bintik merah raksasa (Great Red Spot) dan sabuk awan troposfer.'}
+              </div>
+
+              <button
+                onClick={() => focusCelestialObject('Bumi')}
+                className="w-full mt-1 py-1.5 rounded-lg border border-cyan-500/60 text-cyan-300 bg-cyan-950/40 text-xs font-bold hover:bg-cyan-900/60 transition flex items-center justify-center gap-1.5"
+              >
+                <Compass className="w-3.5 h-3.5" />
+                KEMBALI KE PANDANGAN BUMI
+              </button>
+            </div>
+          )}
+
+          {/* B. Country Inspector (Muncul Saat Negara di Globe Dipencet) */}
+          {selectedCountry && !selectedPlanet && (
             <div className="p-3.5 rounded-2xl border border-cyan-400/60 bg-[#03091e]/90 backdrop-blur-xl shadow-[0_0_25px_rgba(0,229,255,0.25)] space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-cyan-400 flex items-center gap-1.5">
@@ -632,12 +1143,12 @@ export default function GoogleEarthGlobeMap() {
             </div>
           )}
 
-          {/* B. Incident Target Inspector (Muncul Saat Pin Event Dipencet) */}
-          {selectedEvent && selectedMeta && !selectedCountry && (
+          {/* C. Incident Target Inspector (Muncul Saat Pin Event Dipencet) */}
+          {selectedEvent && selectedMeta && !selectedCountry && !selectedPlanet && (
             <div
               style={{
                 borderColor: `${selectedMeta.color}66`,
-                background: 'rgba(3, 9, 30, 0.88)',
+                background: 'rgba(3, 9, 30, 0.90)',
                 boxShadow: `0 0 25px ${selectedMeta.color}25`,
               }}
               className="p-3.5 rounded-2xl border backdrop-blur-xl transition-all"
@@ -686,18 +1197,54 @@ export default function GoogleEarthGlobeMap() {
             </div>
           )}
 
-          {/* C. Live Global Stream List */}
-          <div className="flex-1 rounded-2xl bg-[#03091e]/85 backdrop-blur-xl border border-cyan-500/20 shadow-2xl flex flex-col overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-cyan-900/30 flex items-center justify-between bg-black/30">
+          {/* D. Live Global Stream List dengan Mode Hamburger (Perkecil / Perbesar) */}
+          <div className="flex-1 rounded-2xl bg-[#03091e]/90 backdrop-blur-xl border border-cyan-500/30 shadow-2xl flex flex-col overflow-hidden min-h-0">
+            {/* Header Stream Incidents dengan Kontrol Ukuran */}
+            <div className="px-3.5 py-2.5 border-b border-cyan-900/40 flex items-center justify-between bg-black/40">
               <span className="text-xs font-bold text-cyan-300 tracking-wider flex items-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
                 STREAM INCIDENTS
               </span>
-              <span className="text-[10px] text-gray-500">{events.length} NODES</span>
+              
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-400 font-mono px-1.5 py-0.5 rounded bg-black/50 border border-cyan-900/50">
+                  {filteredEvents.length} NODES
+                </span>
+
+                {/* Tombol Perbesar / Perkecil Ukuran Drawer */}
+                <button
+                  onClick={() => setStreamMode(prev => prev === 'expanded' ? 'normal' : 'expanded')}
+                  title={streamMode === 'expanded' ? 'Perkecil Ukuran' : 'Perbesar Ukuran Drawer'}
+                  className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition"
+                >
+                  {streamMode === 'expanded' ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                </button>
+
+                {/* Tombol Ciutkan Hamburger (Collapse) */}
+                <button
+                  onClick={() => setStreamMode('collapsed')}
+                  title="Ciutkan ke Mode Tombol Hamburger"
+                  className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-              {events.map((ev) => {
+            {/* Input Pencarian Insiden Cepat */}
+            <div className="p-2 border-b border-cyan-950/80 bg-black/20">
+              <input
+                type="text"
+                value={streamSearch}
+                onChange={e => setStreamSearch(e.target.value)}
+                placeholder="Cari gempa, badai, lokasi..."
+                className="w-full px-2.5 py-1 rounded-lg bg-black/50 border border-cyan-900/40 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 font-mono"
+              />
+            </div>
+
+            {/* List Stream Items */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 overscroll-contain">
+              {filteredEvents.map((ev) => {
                 const meta = getCategoryMeta(ev.category);
                 const isSelected = selectedEvent?.id === ev.id;
                 return (
@@ -705,10 +1252,10 @@ export default function GoogleEarthGlobeMap() {
                     key={ev.id}
                     onClick={() => flyToEvent(ev)}
                     style={{
-                      borderColor: isSelected ? meta.color : 'rgba(255,255,255,0.05)',
-                      background: isSelected ? `${meta.color}22` : 'rgba(10, 20, 45, 0.4)',
+                      borderColor: isSelected ? meta.color : 'rgba(255,255,255,0.06)',
+                      background: isSelected ? `${meta.color}25` : 'rgba(10, 20, 45, 0.45)',
                     }}
-                    className="w-full text-left p-2.5 rounded-xl border transition-all hover:border-cyan-400/50 block group"
+                    className="w-full text-left p-2 rounded-xl border transition-all hover:border-cyan-400/60 block group"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span
@@ -721,25 +1268,40 @@ export default function GoogleEarthGlobeMap() {
                         />
                         {meta.badge}
                       </span>
-                      <span className="text-[9px] text-gray-500">{ev.source}</span>
+                      <span className="text-[9px] text-gray-500 font-mono">{ev.source}</span>
                     </div>
 
                     <div className="text-[11px] text-gray-200 line-clamp-1 group-hover:text-cyan-200 transition">
                       {ev.title}
                     </div>
+
+                    {streamMode === 'expanded' && (
+                      <div className="text-[9px] text-gray-500 mt-1 flex justify-between">
+                        <span>LAT/LNG: {ev.lat.toFixed(2)}, {ev.lng.toFixed(2)}</span>
+                        {ev.magnitude && <span className="text-amber-400 font-bold">M{ev.magnitude.toFixed(1)}</span>}
+                      </div>
+                    )}
                   </button>
                 );
               })}
+
+              {filteredEvents.length === 0 && (
+                <div className="text-center py-6 text-gray-500 text-xs">
+                  Tidak ada insiden yang cocok dengan filter.
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── 5. FOOTER INFORMATIF ─── */}
-      <div className="absolute bottom-3 left-5 z-10 text-[10px] text-gray-500 pointer-events-none flex items-center gap-3">
-        <span>DAY/NIGHT SUN TERMINATOR · GOOGLE EARTH PROJECTION</span>
+      {/* ─── 6. FOOTER INFORMATIF BAWAH ─── */}
+      <div className="absolute bottom-2 left-4 z-10 text-[10px] text-gray-500 pointer-events-none hidden sm:flex items-center gap-2">
+        <span className="text-cyan-400">WORLD MONITOR 3D</span>
         <span>•</span>
-        <span>KLIK TOMBOL MATAHARI UNTUK MENGGESER WAKTU SIANG/MALAM</span>
+        <span>GOOGLE EARTH DAY/NIGHT & TATA SURYA TIGA DIMENSI</span>
+        <span>•</span>
+        <span>KLIK PLANET UNTUK INSPEKSI ASTRONOMI</span>
       </div>
     </div>
   );

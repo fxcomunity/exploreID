@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Globe, ShieldAlert, BarChart2, CloudLightning, Leaf, Zap, Cpu, Truck, Flag, ArrowRight } from 'lucide-react';
 import { FeedbackHeroBadge } from '../components/RatingFeedbackModal';
+import Footer from '../components/Footer';
 
 const modules = [
   { path: '/dashboard',   label: 'Global Dashboard',  icon: Globe,           desc: 'Ringkasan kondisi dunia',         color: 'border-cyan-700 hover:border-cyan-500 text-cyan-400' },
@@ -126,14 +127,8 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="px-4 sm:px-10 py-4 border-t border-cyan-900/30 text-gray-700 text-xs flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span>© 2026 World Monitor · Data dari sumber terbuka & API resmi</span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          Semua sistem online
-        </span>
-      </div>
+      {/* Footer Komprehensif (FAQ, Kebijakan & Privasi, Panduan Kontribusi) */}
+      <Footer />
     </div>
   );
 }

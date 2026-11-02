@@ -190,14 +190,19 @@ export async function runAIAnalysis(prompt: string, preferredProvider?: string):
   const mistralKey = import.meta.env.VITE_MISTRAL_KEY as string;
   const openrouterKey = import.meta.env.VITE_OPENROUTER_KEY as string;
 
-  // Coba Groq Llama 3.3 (Super cepat & andal)
-  if (groqKey) {
+  // 1. Coba OpenRouter (Primary #1 AI Gateway)
+  if (openrouterKey) {
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${openrouterKey}`,
+          'HTTP-Referer': 'https://world-monitoring.jack-ai.my.id',
+          'X-Title': 'World Monitor Intelligence',
+        },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'deepseek/deepseek-chat',
           messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
           temperature: 0.5,
           max_tokens: 1500,
@@ -206,14 +211,14 @@ export async function runAIAnalysis(prompt: string, preferredProvider?: string):
       if (res.ok) {
         const d = await res.json();
         const text = d.choices?.[0]?.message?.content;
-        if (text) return { success: true, text, provider: 'Groq (Llama 3.3 70B)' };
+        if (text) return { success: true, text, provider: 'OpenRouter (Primary AI)' };
       }
     } catch {
       // lanjut ke gemini
     }
   }
 
-  // Coba Google Gemini 2.0 Flash
+  // 2. Coba Google Gemini 2.0 Flash (Backup #2)
   if (geminiKey) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
@@ -235,7 +240,7 @@ export async function runAIAnalysis(prompt: string, preferredProvider?: string):
     }
   }
 
-  // Coba DeepSeek V3
+  // 3. Coba DeepSeek V3 (Backup #3)
   if (deepseekKey) {
     try {
       const res = await fetch('https://api.deepseek.com/chat/completions', {
@@ -256,7 +261,7 @@ export async function runAIAnalysis(prompt: string, preferredProvider?: string):
     }
   }
 
-  // Coba OpenAI GPT-4o-mini
+  // 4. Coba OpenAI GPT-4o-mini (Backup #4)
   if (openaiKey) {
     try {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -271,6 +276,52 @@ export async function runAIAnalysis(prompt: string, preferredProvider?: string):
         const d = await res.json();
         const text = d.choices?.[0]?.message?.content;
         if (text) return { success: true, text, provider: 'OpenAI GPT-4o-mini' };
+      }
+    } catch {
+      // lanjut ke groq
+    }
+  }
+
+  // 5. Coba Groq Llama 3.3 (Backup #5)
+  if (groqKey) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
+          temperature: 0.5,
+          max_tokens: 1500,
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const text = d.choices?.[0]?.message?.content;
+        if (text) return { success: true, text, provider: 'Groq (Llama 3.3 70B - Backup 5)' };
+      }
+    } catch {
+      // lanjut ke mistral
+    }
+  }
+
+  // 6. Coba Mistral AI (Backup #6)
+  if (mistralKey) {
+    try {
+      const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${mistralKey}` },
+        body: JSON.stringify({
+          model: 'mistral-small-latest',
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
+          temperature: 0.5,
+          max_tokens: 1500,
+        }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const text = d.choices?.[0]?.message?.content;
+        if (text) return { success: true, text, provider: 'Mistral AI' };
       }
     } catch {
       // failover habis

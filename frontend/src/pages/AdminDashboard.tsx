@@ -781,36 +781,46 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
-                {adminFeedbacks.map(f => (
-                  <div key={f.id} className="p-3 rounded-lg bg-black/40 border border-cyan-950 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-cyan-300">{f.authorName}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-800 text-gray-400 font-mono">
-                          ID: #{f.deviceId}
-                        </span>
-                        <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                          {f.deviceType === 'mobile' ? <Smartphone className="w-3 h-3 text-cyan-500" /> : <Monitor className="w-3 h-3 text-blue-500" />}
-                          {f.deviceType}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map(st => (
-                          <Star
-                            key={st}
-                            className={`w-3 h-3 ${st <= f.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    {f.comment && (
-                      <p className="text-xs text-gray-300 font-sans mt-0.5">{f.comment}</p>
-                    )}
-                    <div className="text-[9px] text-gray-600 font-mono text-right">
-                      {new Date(f.createdAt).toLocaleString('id-ID')}
+                {adminFeedbacks.length === 0 ? (
+                  <div className="p-8 text-center rounded-xl bg-black/30 border border-cyan-950 text-gray-500 font-mono space-y-2">
+                    <MessageSquare className="w-8 h-8 text-gray-600 mx-auto opacity-40" />
+                    <div className="text-sm text-gray-400 font-bold">Belum Ada Ulasan Pengunjung</div>
+                    <div className="text-xs text-gray-500 max-w-md mx-auto">
+                      Sistem bersih tanpa data fiktif. Ulasan asli pengunjung publik dengan ID unik (contoh: Anonim100) akan otomatis muncul di sini secara real-time.
                     </div>
                   </div>
-                ))}
+                ) : (
+                  adminFeedbacks.map(f => (
+                    <div key={f.id} className="p-3 rounded-lg bg-black/40 border border-cyan-950 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-cyan-300">{f.authorName}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-800 text-gray-400 font-mono">
+                            ID: #{f.deviceId}
+                          </span>
+                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                            {f.deviceType === 'mobile' ? <Smartphone className="w-3 h-3 text-cyan-500" /> : <Monitor className="w-3 h-3 text-blue-500" />}
+                            {f.deviceType}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map(st => (
+                            <Star
+                              key={st}
+                              className={`w-3 h-3 ${st <= f.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {f.comment && (
+                        <p className="text-xs text-gray-300 font-sans mt-0.5">{f.comment}</p>
+                      )}
+                      <div className="text-[9px] text-gray-600 font-mono text-right">
+                        {new Date(f.createdAt).toLocaleString('id-ID')}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
