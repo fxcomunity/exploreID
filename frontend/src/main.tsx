@@ -39,9 +39,10 @@ const router = createBrowserRouter([
       { path: '/data',          element: <DataExplorer /> },
       { path: '/notifikasi',    element: <NotificationCenter /> },
       { path: '/pengaturan',    element: <SettingsPage /> },
-      { path: '/admin/dashboard', element: <AdminDashboard /> },
     ],
   },
+  // Dedicated Fullscreen Admin Control Panel (Tanpa Sidebar Monitoring)
+  { path: '/admin/dashboard', element: <AdminDashboard /> },
   // Dedicated Maintenance Page (Fullscreen)
   { path: '/maintenance', element: <MaintenancePage /> },
   // Admin login — standalone (no sidebar/layout)

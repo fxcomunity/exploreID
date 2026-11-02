@@ -66,6 +66,18 @@ export default function AdminProfileButton() {
           {/* Menu Items */}
           <div className="p-1.5 space-y-1">
             <a
+              href="/"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-gray-200 hover:text-white hover:bg-cyan-950/60 transition"
+            >
+              <ExternalLink className="w-4 h-4 text-emerald-400" />
+              <div>
+                <div className="font-bold">Web Utama</div>
+                <div className="text-[10px] text-gray-400">Kembali ke halaman monitoring</div>
+              </div>
+            </a>
+
+            <a
               href="/admin/dashboard"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-gray-200 hover:text-white hover:bg-cyan-950/60 transition"
@@ -73,19 +85,19 @@ export default function AdminProfileButton() {
               <Shield className="w-4 h-4 text-cyan-400" />
               <div>
                 <div className="font-bold">Panel Admin</div>
-                <div className="text-[10px] text-gray-400">Pusat kendali & keamanan server</div>
+                <div className="text-[10px] text-gray-400">Kontrol sistem, maintenance & server</div>
               </div>
             </a>
 
             <a
-              href="/dashboard"
+              href="/admin/dashboard"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-gray-200 hover:text-white hover:bg-cyan-950/60 transition"
             >
-              <LayoutDashboard className="w-4 h-4 text-blue-400" />
+              <User className="w-4 h-4 text-purple-400" />
               <div>
-                <div className="font-bold">Dashboard Pengguna</div>
-                <div className="text-[10px] text-gray-400">Monitoring statistik global</div>
+                <div className="font-bold">Pengaturan Akun</div>
+                <div className="text-[10px] text-gray-400">Ganti nama, email & password</div>
               </div>
             </a>
           </div>
