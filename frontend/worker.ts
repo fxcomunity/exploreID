@@ -301,7 +301,7 @@ const GLOBAL_FEEDBACKS: FeedbackItem[] = [
   {
     id: 'fb-1',
     deviceId: 12,
-    authorName: 'Anonim 12',
+    authorName: 'Anonim12',
     rating: 5,
     comment: 'Platform intelijen tercepat dan visualisasi petanya sangat memukau!',
     createdAt: Date.now() - 3600000 * 24 * 3,
@@ -310,7 +310,7 @@ const GLOBAL_FEEDBACKS: FeedbackItem[] = [
   {
     id: 'fb-2',
     deviceId: 27,
-    authorName: 'Anonim 27',
+    authorName: 'Anonim27',
     rating: 5,
     comment: 'Data seismik dan radar cuacanya akurat banget. Keren abis.',
     createdAt: Date.now() - 3600000 * 24 * 2,
@@ -319,7 +319,7 @@ const GLOBAL_FEEDBACKS: FeedbackItem[] = [
   {
     id: 'fb-3',
     deviceId: 45,
-    authorName: 'Anonim 45',
+    authorName: 'Anonim45',
     rating: 4,
     comment: 'Fitur AI analitiknya ngebantu banget pantau geopolitik global.',
     createdAt: Date.now() - 3600000 * 18,
@@ -328,7 +328,7 @@ const GLOBAL_FEEDBACKS: FeedbackItem[] = [
   {
     id: 'fb-4',
     deviceId: 88,
-    authorName: 'Anonim 88',
+    authorName: 'Anonim88',
     rating: 5,
     comment: 'Tampilannya futuristik dan responsif banget diakses lewat HP.',
     createdAt: Date.now() - 3600000 * 5,
@@ -424,7 +424,7 @@ export default {
             if (id >= nextDeviceId) nextDeviceId = id + 1;
             identity = {
               id,
-              name: `Anonim ${id}`,
+              name: `Anonim${id}`,
               deviceType,
             };
             DEVICE_REGISTRY[key] = identity;
@@ -467,7 +467,7 @@ export default {
             if (id >= nextDeviceId) nextDeviceId = id + 1;
             identity = {
               id,
-              name: `Anonim ${id}`,
+              name: `Anonim${id}`,
               deviceType,
             };
             DEVICE_REGISTRY[key] = identity;
@@ -479,7 +479,7 @@ export default {
           const sanitizeText = (s: string) => s.replace(/<[^>]*>?/gm, '').trim();
           const comment = sanitizeText(String(body.comment || '')).slice(0, 500);
           // Nama penampil dikunci mutlak dari sistem (user tidak bisa mengganti)
-          const authorName = `Anonim ${identity.id}`;
+          const authorName = `Anonim${identity.id}`;
 
           // Cek jika ID perangkat ini sudah pernah submit ulasan
           const existingIndex = GLOBAL_FEEDBACKS.findIndex(f => f.deviceId === identity.id);

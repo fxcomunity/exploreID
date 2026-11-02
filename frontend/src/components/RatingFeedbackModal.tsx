@@ -160,7 +160,7 @@ export default function RatingFeedbackModal({
 
   const currentDisplayRating = hoverRating || rating;
   const ratingInfo = RATING_LABELS[currentDisplayRating] || RATING_LABELS[5];
-  const deviceId = data.identity?.id || localStorage.getItem('wm_device_id') || '...';
+  const deviceId = data.identity?.id || localStorage.getItem('wm_device_id') || '100';
   const isMobile = data.identity?.deviceType === 'mobile' || /Android|iPhone/i.test(navigator.userAgent);
 
   return (
@@ -207,8 +207,8 @@ export default function RatingFeedbackModal({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-gray-400 uppercase tracking-wider">Identitas Unik Anda:</span>
-                  <span className="text-xs font-bold text-cyan-300 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-600/60">
-                    Anonim {deviceId}
+                  <span className="text-xs font-bold text-cyan-300 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-600/60 font-mono">
+                    Anonim{deviceId}
                   </span>
                 </div>
                 <div className="text-[10px] text-emerald-400 flex items-center gap-1.5 mt-0.5">
@@ -343,7 +343,7 @@ export default function RatingFeedbackModal({
                   type="text"
                   readOnly
                   disabled
-                  value={`Anonim ${deviceId}`}
+                  value={`Anonim${deviceId}`}
                   className="w-full px-3 py-2.5 rounded-lg bg-black/70 border border-cyan-900/60 text-xs text-cyan-300 font-bold font-mono cursor-not-allowed select-none"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
@@ -351,7 +351,7 @@ export default function RatingFeedbackModal({
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 font-mono">
-                ID unik dibuat otomatis oleh sistem dan terkunci permanen untuk perangkat ini.
+                ID unik permanen (contoh: Anonim100, Anonim1212) dibuat otomatis oleh sistem dan dikunci.
               </p>
             </div>
 
