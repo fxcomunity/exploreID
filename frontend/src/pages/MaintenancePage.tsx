@@ -28,9 +28,13 @@ export default function MaintenancePage() {
     return () => clearInterval(t);
   }, [targetEnd]);
 
+  const [checkStatusMsg, setCheckStatusMsg] = useState('');
+
   // auto-cek status live dari server (/api/maintenance)
-  const check = async () => {
+  const check = async (isManualClick = false) => {
     setChecking(true);
+    if (isManualClick) setCheckStatusMsg('');
+
     try {
       const res = await fetch('/api/maintenance', { cache: 'no-store' });
       if (res.ok) {
@@ -45,9 +49,22 @@ export default function MaintenancePage() {
         if (data.title) setCustomTitle(data.title);
         if (data.message) setCustomMessage(data.message);
         if (data.endTime) setTargetEnd(data.endTime);
+
+        if (isManualClick) {
+          setCheckStatusMsg('⏳ Server masih dalam proses perbaikan/pemeliharaan. Harap tunggu sesuai hitungan mundur di atas.');
+          setTimeout(() => setCheckStatusMsg(''), 5000);
+        }
+      } else {
+        if (isManualClick) {
+          setCheckStatusMsg('⏳ Server masih dalam pemeliharaan berkala.');
+          setTimeout(() => setCheckStatusMsg(''), 5000);
+        }
       }
     } catch {
-      /* masih offline */
+      if (isManualClick) {
+        setCheckStatusMsg('⏳ Server belum selesai perbaikan. Silakan cek beberapa saat lagi.');
+        setTimeout(() => setCheckStatusMsg(''), 5000);
+      }
     } finally {
       setTimeout(() => setChecking(false), 500);
     }
@@ -140,13 +157,20 @@ export default function MaintenancePage() {
           </div>
 
           <button
-            onClick={check}
+            onClick={() => check(true)}
             disabled={checking}
             className="mt-6 w-full py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm tracking-wide transition shadow-lg shadow-cyan-950/60 flex items-center justify-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
             <span>{checking ? 'Memeriksa status...' : 'Cek Status Sekarang'}</span>
           </button>
+
+          {/* Status Alert Pemberitahuan Saat Belum Selesai Perbaikan */}
+          {checkStatusMsg && (
+            <div className="mt-3 p-2.5 rounded-xl bg-amber-950/60 border border-amber-600/50 text-amber-300 text-xs text-center font-mono animate-fadeIn">
+              {checkStatusMsg}
+            </div>
+          )}
 
           <p className="text-[10px] font-mono text-gray-500 mt-3">
             Halaman ini otomatis reload saat server kembali beroperasi normal.

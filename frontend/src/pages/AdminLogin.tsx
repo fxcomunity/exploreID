@@ -96,9 +96,11 @@ export default function AdminLogin() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo & Branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 mb-4 shadow-lg shadow-cyan-950/50">
-            <Shield className="w-8 h-8 text-cyan-400" />
-          </div>
+          <img
+            src="/admin-shield-logo.png"
+            alt="World Monitor Admin Shield"
+            className="w-20 h-20 object-contain mx-auto mb-3 drop-shadow-[0_0_20px_rgba(0,229,255,0.7)]"
+          />
           <h1 className="text-2xl font-bold text-white tracking-wide">World Monitor</h1>
           <p className="text-xs font-mono text-gray-500 mt-1 tracking-widest uppercase">Secure Admin Access</p>
           <div className="flex items-center justify-center gap-2 mt-3">

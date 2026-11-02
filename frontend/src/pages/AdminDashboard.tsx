@@ -128,11 +128,13 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen w-full bg-[#030816] text-gray-200 font-mono flex flex-col">
       {/* ─── DEDICATED ADMIN TOPBAR (STANDALONE TANPA SIDEBAR MONITOR) ─── */}
-      <header className="px-4 sm:px-6 py-3 bg-[#060D1F] border-b border-cyan-900/50 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
+      <header className="px-4 sm:px-6 py-2.5 bg-[#060D1F] border-b border-cyan-900/50 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/40 flex items-center justify-center shadow-lg shadow-cyan-950/60">
-            <Shield className="w-5 h-5 text-cyan-400" />
-          </div>
+          <img
+            src="/admin-shield-logo.png"
+            alt="Admin Security Shield"
+            className="w-10 h-10 object-contain drop-shadow-[0_0_12px_rgba(0,229,255,0.6)]"
+          />
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -174,14 +176,20 @@ export default function AdminDashboard() {
         
         {/* Admin Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-900/40 pb-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-              <Shield className="w-6 h-6 text-cyan-400" />
-              Admin Master Control Panel
-            </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Admin: <span className="text-cyan-300 font-bold">{adminName}</span> ({adminEmail}) · Sesi Cookie: 7 Hari
-            </p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/admin-shield-logo.png"
+              alt="Admin Shield"
+              className="w-12 h-12 object-contain drop-shadow-[0_0_15px_rgba(0,229,255,0.7)] flex-shrink-0"
+            />
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide">
+                Admin Master Control Panel
+              </h1>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Admin: <span className="text-cyan-300 font-bold">{adminName}</span> ({adminEmail}) · Sesi Cookie: 7 Hari
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 text-xs">

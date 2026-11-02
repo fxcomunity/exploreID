@@ -36,9 +36,11 @@ export default function AdminProfileButton() {
         className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#081226] border border-cyan-700/60 hover:border-cyan-400 text-white transition shadow-md shadow-cyan-950/40"
         title="Admin Control Profile"
       >
-        <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center text-white text-[11px] font-bold shadow-inner">
-          A
-        </div>
+        <img
+          src="/admin-shield-logo.png"
+          alt="Admin Shield Logo"
+          className="w-6 h-6 object-contain drop-shadow-[0_0_8px_rgba(0,229,255,0.7)]"
+        />
         <div className="hidden sm:flex flex-col text-left">
           <span className="text-[11px] font-mono font-bold leading-none text-cyan-300">Admin Jack</span>
           <span className="text-[9px] font-mono text-gray-400 leading-tight">Superadmin</span>
