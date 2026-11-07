@@ -477,6 +477,24 @@ export function severityColor(magnitude: number | null): string {
   return 'text-yellow-400';
 }
 
+// ─── Berita Sains & Teknologi Global (GDELT) ─────────────────────────────────
+export interface TechnologyNewsItem {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  country: string;
+  publishedAt: string;
+}
+
+export async function fetchTechnologyNews(): Promise<TechnologyNewsItem[]> {
+  const res = await fetch('/api/technology/news', { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Gagal memuat berita sains dan teknologi (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
 // ─── Geopolitik & Konflik Global (GDELT Project & UN ReliefWeb) ─────────────
 export interface GeopoliticalEvent {
   id: string;
@@ -625,4 +643,3 @@ export async function fetchYouTubeDisasterNews(query = 'natural disaster earthqu
   }
   return [];
 }
-

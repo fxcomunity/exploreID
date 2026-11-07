@@ -263,6 +263,20 @@ npm run build
 npm run deploy
 ```
 
+### 7. Protect the site with Cloudflare Turnstile
+Create a Turnstile widget in the Cloudflare dashboard and add its keys to the Worker:
+
+- Set `TURNSTILE_SITE_KEY` to the public site key in the Worker's environment variables.
+- Add `TURNSTILE_SECRET_KEY` as a Worker secret. From the `frontend` directory, run `npx wrangler secret put TURNSTILE_SECRET_KEY` and paste the secret key when prompted.
+- In Cloudflare, configure the site key under the Worker's **Settings → Variables and Secrets**. For local development, create the git-ignored `frontend/.dev.vars` file:
+  ```env
+  TURNSTILE_SITE_KEY=your_public_site_key
+  TURNSTILE_SECRET_KEY=your_secret_key
+  ```
+- Include the hostname serving the site in the Turnstile widget's allowed hostnames.
+
+The site displays the widget before rendering the app. The Worker validates its token with Cloudflare, then issues a signed, HTTP-only session cookie that allows API requests for 12 hours. The secret key must never be added to a `VITE_` variable or shipped to the browser.
+
 ---
 
 ## 📁 Project Structure

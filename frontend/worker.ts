@@ -48,7 +48,12 @@ interface Env {
   // Admin Auth
   ADMIN_USER?: string;
   ADMIN_PASS?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
 }
+
+const TURNSTILE_SESSION_COOKIE = 'wm_turnstile_session';
+const TURNSTILE_SESSION_TTL_SECONDS = 12 * 60 * 60;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -65,6 +70,67 @@ function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, 
       ...extraHeaders,
     },
   });
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function base64UrlDecode(value: string): ArrayBuffer {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='));
+  const buffer = new ArrayBuffer(binary.length);
+  const bytes = new Uint8Array(buffer);
+  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+  return buffer;
+}
+
+async function getTurnstileCookieSignature(secret: string): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+}
+
+async function createTurnstileSessionCookie(secret: string, secure: boolean): Promise<string> {
+  const expiry = String(Math.floor(Date.now() / 1000) + TURNSTILE_SESSION_TTL_SECONDS);
+  const key = await getTurnstileCookieSignature(secret);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(expiry));
+  const secureAttribute = secure ? '; Secure' : '';
+  return `${TURNSTILE_SESSION_COOKIE}=${expiry}.${base64UrlEncode(new Uint8Array(signature))}; HttpOnly${secureAttribute}; SameSite=Lax; Path=/; Max-Age=${TURNSTILE_SESSION_TTL_SECONDS}`;
+}
+
+async function hasValidTurnstileSession(request: Request, secret: string): Promise<boolean> {
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const sessionCookie = cookieHeader
+    .split(';')
+    .map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(`${TURNSTILE_SESSION_COOKIE}=`));
+  const value = sessionCookie?.slice(TURNSTILE_SESSION_COOKIE.length + 1);
+  if (!value) return false;
+
+  const [expiry, encodedSignature, ...extra] = value.split('.');
+  if (!expiry || !encodedSignature || extra.length > 0 || !/^\d+$/.test(expiry)) return false;
+  const expirySeconds = Number(expiry);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (expirySeconds <= nowSeconds || expirySeconds > nowSeconds + TURNSTILE_SESSION_TTL_SECONDS) return false;
+
+  try {
+    const key = await getTurnstileCookieSignature(secret);
+    return await crypto.subtle.verify(
+      'HMAC',
+      key,
+      base64UrlDecode(encodedSignature),
+      new TextEncoder().encode(expiry)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function getAIKeys(env: Env) {
@@ -348,6 +414,75 @@ export default {
     // ─── 1. API GATEWAY ROUTER (/api/*) ───────────────────────────────────────
     if (url.pathname.startsWith('/api/')) {
       try {
+        if (url.pathname === '/api/turnstile/config' && request.method === 'GET') {
+          if (!env.TURNSTILE_SITE_KEY || !env.TURNSTILE_SECRET_KEY) {
+            return jsonResponse({ error: 'Turnstile belum dikonfigurasi di Cloudflare Worker.' }, 503);
+          }
+          return jsonResponse({ siteKey: env.TURNSTILE_SITE_KEY });
+        }
+
+        if (url.pathname === '/api/turnstile/session' && request.method === 'GET') {
+          if (!env.TURNSTILE_SECRET_KEY) {
+            return jsonResponse({ error: 'Turnstile belum dikonfigurasi di Cloudflare Worker.' }, 503);
+          }
+          if (!(await hasValidTurnstileSession(request, env.TURNSTILE_SECRET_KEY))) {
+            return jsonResponse({ error: 'Verifikasi manusia diperlukan.' }, 401);
+          }
+          return new Response(null, { status: 204 });
+        }
+
+        if (url.pathname === '/api/turnstile/verify' && request.method === 'POST') {
+          if (!env.TURNSTILE_SITE_KEY || !env.TURNSTILE_SECRET_KEY) {
+            return jsonResponse({ error: 'Turnstile belum dikonfigurasi di Cloudflare Worker.' }, 503);
+          }
+
+          const body = await request.json().catch(() => null) as { token?: unknown } | null;
+          if (!body || typeof body.token !== 'string' || body.token.length === 0 || body.token.length > 2048) {
+            return jsonResponse({ error: 'Token verifikasi tidak valid.' }, 400);
+          }
+
+          const params = new URLSearchParams({
+            secret: env.TURNSTILE_SECRET_KEY,
+            response: body.token,
+          });
+          if (clientIP !== 'unknown') params.set('remoteip', clientIP);
+
+          const verificationResponse = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params,
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!verificationResponse.ok) {
+            console.error('Turnstile Siteverify HTTP error:', verificationResponse.status);
+            return jsonResponse({ error: 'Layanan verifikasi sedang tidak tersedia.' }, 502);
+          }
+
+          const verification = await verificationResponse.json() as {
+            success?: boolean;
+            hostname?: string;
+          };
+          if (!verification.success || verification.hostname !== url.hostname) {
+            return jsonResponse({ error: 'Verifikasi gagal. Silakan coba lagi.' }, 403);
+          }
+
+          const cookie = await createTurnstileSessionCookie(env.TURNSTILE_SECRET_KEY, url.protocol === 'https:');
+          return jsonResponse({ success: true }, 200, { 'Set-Cookie': cookie });
+        }
+
+        const isTurnstileEndpoint =
+          (url.pathname === '/api/turnstile/config' && request.method === 'GET')
+          || (url.pathname === '/api/turnstile/session' && request.method === 'GET')
+          || (url.pathname === '/api/turnstile/verify' && request.method === 'POST');
+        if (!isTurnstileEndpoint) {
+          if (!env.TURNSTILE_SECRET_KEY) {
+            return jsonResponse({ error: 'Turnstile belum dikonfigurasi di Cloudflare Worker.' }, 503);
+          }
+          if (!(await hasValidTurnstileSession(request, env.TURNSTILE_SECRET_KEY))) {
+            return jsonResponse({ error: 'Verifikasi manusia diperlukan.' }, 403);
+          }
+        }
+
         // [GET] /api/maintenance — Ambil status maintenance sistem secara live
         if (url.pathname === '/api/maintenance' && request.method === 'GET') {
           return jsonResponse({
@@ -642,6 +777,70 @@ export default {
             error: 'Seluruh provider AI yang tersedia mengalami kegagalan / rate-limit.',
             attempts,
           }, 502);
+        }
+
+        // [GET] /api/technology/news — Berita sains & teknologi terbaru dari GDELT
+        if (url.pathname === '/api/technology/news' && request.method === 'GET') {
+          const cache = (globalThis.caches as CacheStorage & { default: Cache }).default;
+          const cacheKey = new Request(new URL('/api/technology/news', url.origin).toString());
+          const cachedResponse = await cache.match(cacheKey);
+          if (cachedResponse) return cachedResponse;
+
+          const apiUrl = new URL('https://api.gdeltproject.org/api/v2/doc/doc');
+          apiUrl.search = new URLSearchParams({
+            query: '(technology OR science OR space OR semiconductor OR "artificial intelligence" OR NASA OR research) sourcelang:english',
+            mode: 'artlist',
+            format: 'json',
+            maxrecords: '50',
+            sort: 'datedesc',
+          }).toString();
+
+          try {
+            const res = await fetch(apiUrl.toString(), {
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!res.ok) throw new Error(`GDELT HTTP ${res.status}`);
+
+            const data = await res.json() as {
+              articles?: Array<{
+                url?: string;
+                title?: string;
+                seendate?: string;
+                domain?: string;
+                sourcecountry?: string;
+              }>;
+            };
+            const articles = (data.articles || []).flatMap(article => {
+              const date = article.seendate?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
+              const topicalTitle = /\b(?:technology|tech|science|scientific|research|space|NASA|satellite|semiconductor|chip|artificial intelligence|AI|robot(?:ics)?|quantum|innovation|breakthrough|discovery|biotech|astronomy|physics|engineering|software|computer)\b/i;
+              if (!article.url || !article.title || !topicalTitle.test(article.title) || !date) return [];
+
+              try {
+                const articleUrl = new URL(article.url);
+                if (!['http:', 'https:'].includes(articleUrl.protocol)) return [];
+              } catch {
+                return [];
+              }
+
+              return [{
+                id: article.url,
+                title: article.title,
+                url: article.url,
+                source: article.domain || 'Sumber berita',
+                country: article.sourcecountry || '',
+                publishedAt: `${date[1]}-${date[2]}-${date[3]}T${date[4]}:${date[5]}:${date[6]}Z`,
+              }];
+            });
+
+            const response = jsonResponse(articles, 200, {
+              'Cache-Control': 'public, max-age=300',
+            });
+            await cache.put(cacheKey, response.clone());
+            return response;
+          } catch (e: unknown) {
+            console.error('Failed to fetch technology and science news:', e);
+            return jsonResponse({ error: 'Feed berita sains dan teknologi sedang tidak tersedia.' }, 502);
+          }
         }
 
         // [GET] /api/geopolitics — GDELT Project & UN ReliefWeb (Pengganti ACLED)
